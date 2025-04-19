@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -53,7 +54,11 @@ import {
   Badge,
   Checkbox,
   FormControlLabel,
-  Switch
+  Switch,
+  Avatar,
+  Popover,
+  ListItemButton,
+  ListItemAvatar
 } from '@mui/material';
 import {
   PaidOutlined,
@@ -78,57 +83,53 @@ import {
   PersonOutline as PersonIcon,
   CheckCircle as PresentIcon,
   Cancel as AbsentIcon,
-  Today as TodayIcon
+  Today as TodayIcon,
+  AccountCircle as AccountCircleIcon,
+  Settings as SettingsIcon,
+  ExitToApp as LogoutIcon,
+  Download as DownloadIcon,
+  Class as ClassIcon,
+  Assessment as AssessmentIcon,
+  EventNote as EventNoteIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
-// Import Firebase components (kept for future use)
-// import { collection, getDocs } from 'firebase/firestore';
-// import { db } from '../firebase';
-import { format, isPast, parseISO, isAfter, isBefore, subDays, addDays } from 'date-fns';
+import { format, isPast, parseISO, isAfter, isBefore, subDays, addDays, startOfMonth } from 'date-fns';
 import { utils as xlsxUtils, writeFile } from 'xlsx';
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip as RechartsTooltip,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
   LineChart,
   Line,
-  AreaChart,
-  Area,
-  ResponsiveContainer
+  Legend,
 } from 'recharts';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
-// Extended dummy data with more students and batches (using Indian Rupees)
 const dummyStudents = [
-  // Batch 2024A
   { id: '1', name: 'John Doe', batch: '2024A', feesMonth: '2024-02-15', amount: 45000, status: 'Paid' },
   { id: '2', name: 'Jane Smith', batch: '2024A', feesMonth: '2024-01-15', amount: 45000, status: 'Unpaid' },
   { id: '3', name: 'Alice Johnson', batch: '2024A', feesMonth: '2024-02-15', amount: 45000, status: 'Paid' },
   { id: '10', name: 'Peter Parker', batch: '2024A', feesMonth: '2024-03-15', amount: 45000, status: 'Unpaid' },
-  // Batch 2024B
   { id: '4', name: 'Mike Johnson', batch: '2024B', feesMonth: '2024-02-15', amount: 52000, status: 'Paid' },
   { id: '5', name: 'Sarah Williams', batch: '2024B', feesMonth: '2024-01-15', amount: 52000, status: 'Unpaid' },
   { id: '6', name: 'Tom Wilson', batch: '2024B', feesMonth: '2024-03-15', amount: 52000, status: 'Unpaid' },
   { id: '11', name: 'Mary Jane', batch: '2024B', feesMonth: '2024-02-15', amount: 52000, status: 'Paid' },
-  // Batch 2024C
   { id: '7', name: 'Robert Brown', batch: '2024C', feesMonth: '2024-03-15', amount: 48000, status: 'Unpaid' },
   { id: '8', name: 'Emily Davis', batch: '2024C', feesMonth: '2024-02-15', amount: 48000, status: 'Paid' },
   { id: '9', name: 'James Miller', batch: '2024C', feesMonth: '2024-01-15', amount: 48000, status: 'Paid' },
   { id: '12', name: 'David Clark', batch: '2024C', feesMonth: '2024-03-15', amount: 48000, status: 'Unpaid' },
-  // Batch 2024D
   { id: '13', name: 'Lisa Anderson', batch: '2024D', feesMonth: '2024-02-15', amount: 50000, status: 'Paid' },
   { id: '14', name: 'Kevin White', batch: '2024D', feesMonth: '2024-03-15', amount: 50000, status: 'Unpaid' },
   { id: '15', name: 'Susan Brown', batch: '2024D', feesMonth: '2024-01-15', amount: 50000, status: 'Paid' }
 ];
 
-// Format currency in Indian Rupees
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -216,7 +217,6 @@ const TabPanel = (props) => {
   );
 };
 
-// Styled components for the logo
 const LogoContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(3),
   height: '120px',
@@ -241,12 +241,10 @@ const Logo = () => (
   </LogoContainer>
 );
 
-// Create Alert component
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
-// Create separate dialog components
 const AddStudentDialog = React.memo(({ 
   open, 
   onClose, 
@@ -254,94 +252,173 @@ const AddStudentDialog = React.memo(({
   uniqueBatches, 
   newStudent, 
   onInputChange 
-}) => (
-  <Dialog 
-    open={open} 
-    onClose={onClose}
-    maxWidth="sm"
-    fullWidth
-  >
-    <DialogTitle>Add New Student</DialogTitle>
-    <DialogContent>
-      <DialogContentText sx={{ mb: 2 }}>
-        Please fill in the student details below
-      </DialogContentText>
-      <Stack spacing={2} sx={{ mt: 2 }}>
-        <TextField
-          autoFocus
-          name="name"
-          label="Student Name"
-          type="text"
-          fullWidth
-          value={newStudent.name}
-          onChange={onInputChange}
-          required
-        />
-        <TextField
-          select
-          name="batch"
-          label="Batch"
-          fullWidth
-          value={newStudent.batch}
-          onChange={onInputChange}
-          required
+}) => {
+  const [isNewBatch, setIsNewBatch] = useState(false);
+  const [newBatchName, setNewBatchName] = useState('');
+  const [batchError, setBatchError] = useState('');
+
+  const handleBatchChange = (event) => {
+    const value = event.target.value;
+    if (value === 'new') {
+      setIsNewBatch(true);
+      onInputChange({ target: { name: 'batch', value: '' } });
+    } else {
+      setIsNewBatch(false);
+      onInputChange(event);
+    }
+  };
+
+  const handleNewBatchChange = (event) => {
+    const value = event.target.value;
+    setNewBatchName(value);
+    
+    // Validate batch name format
+    if (value && !/^\d{4}[A-Z]$/.test(value)) {
+      setBatchError('Batch should be in format: YYYYX (e.g., 2024A)');
+    } else {
+      setBatchError('');
+      onInputChange({ target: { name: 'batch', value } });
+    }
+  };
+
+  const handleClose = () => {
+    setIsNewBatch(false);
+    setNewBatchName('');
+    setBatchError('');
+    onClose();
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle>Add New Student</DialogTitle>
+      <DialogContent>
+        <DialogContentText sx={{ mb: 2 }}>
+          Please fill in the student details below
+        </DialogContentText>
+        <Stack spacing={2} sx={{ mt: 2 }}>
+          <TextField
+            autoFocus
+            name="name"
+            label="Student Name"
+            type="text"
+            fullWidth
+            value={newStudent.name}
+            onChange={onInputChange}
+            required
+          />
+          
+          {!isNewBatch ? (
+            <FormControl fullWidth>
+              <InputLabel>Batch</InputLabel>
+              <Select
+                name="batch"
+                value={newStudent.batch}
+                onChange={handleBatchChange}
+                required
+              >
+                {uniqueBatches.map((batch) => (
+                  <MenuItem key={batch} value={batch}>
+                    Batch {batch}
+                  </MenuItem>
+                ))}
+                <MenuItem value="new" sx={{ color: 'primary.main' }}>
+                  <AddIcon sx={{ mr: 1 }} />
+                  Add New Batch
+                </MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <TextField
+              name="newBatch"
+              label="New Batch"
+              type="text"
+              fullWidth
+              value={newBatchName}
+              onChange={handleNewBatchChange}
+              required
+              error={Boolean(batchError)}
+              helperText={batchError || "Enter batch in format: YYYYX (e.g., 2024A)"}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton 
+                      onClick={() => {
+                        setIsNewBatch(false);
+                        setNewBatchName('');
+                        setBatchError('');
+                        onInputChange({ target: { name: 'batch', value: '' } });
+                      }}
+                      edge="end"
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
+
+          <TextField
+            name="feesMonth"
+            label="Fees Month"
+            type="date"
+            fullWidth
+            value={newStudent.feesMonth}
+            onChange={onInputChange}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            required
+          />
+          <TextField
+            name="amount"
+            label="Fees Amount"
+            type="number"
+            fullWidth
+            value={newStudent.amount}
+            onChange={onInputChange}
+            InputProps={{
+              startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+            }}
+            required
+          />
+          <TextField
+            select
+            name="status"
+            label="Payment Status"
+            fullWidth
+            value={newStudent.status}
+            onChange={onInputChange}
+            required
+          >
+            <MenuItem value="Paid">Paid</MenuItem>
+            <MenuItem value="Unpaid">Unpaid</MenuItem>
+          </TextField>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose}>Cancel</Button>
+        <Button 
+          onClick={onAdd}
+          variant="contained"
+          disabled={
+            !newStudent.name || 
+            !newStudent.batch || 
+            !newStudent.amount ||
+            (isNewBatch && Boolean(batchError))
+          }
         >
-          {uniqueBatches.map((batch) => (
-            <MenuItem key={batch} value={batch}>
-              Batch {batch}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          name="feesMonth"
-          label="Fees Month"
-          type="date"
-          fullWidth
-          value={newStudent.feesMonth}
-          onChange={onInputChange}
-          InputLabelProps={{
-            shrink: true,
-          }}
-          required
-        />
-        <TextField
-          name="amount"
-          label="Fees Amount"
-          type="number"
-          fullWidth
-          value={newStudent.amount}
-          onChange={onInputChange}
-          InputProps={{
-            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-          }}
-          required
-        />
-        <TextField
-          select
-          name="status"
-          label="Payment Status"
-          fullWidth
-          value={newStudent.status}
-          onChange={onInputChange}
-          required
-        >
-          <MenuItem value="Paid">Paid</MenuItem>
-          <MenuItem value="Unpaid">Unpaid</MenuItem>
-        </TextField>
-      </Stack>
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={onClose}>Cancel</Button>
-      <Button 
-        onClick={onAdd}
-        variant="contained"
-        disabled={!newStudent.name || !newStudent.batch || !newStudent.amount}
-      >
-        Add Student
-      </Button>
-    </DialogActions>
-  </Dialog>
-));
+          Add Student
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+});
 
 const EditStudentDialog = React.memo(({ 
   open, 
@@ -439,7 +516,7 @@ const EditStudentDialog = React.memo(({
   </Dialog>
 ));
 
-const AttendanceView = React.memo(({ students, uniqueBatches }) => {
+const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary }) => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedBatch, setSelectedBatch] = useState('all');
   const [attendanceData, setAttendanceData] = useState({});
@@ -459,7 +536,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
   });
   const [showLateAttendance, setShowLateAttendance] = useState(false);
 
-  // Initialize attendance data for selected date if not exists
   useEffect(() => {
     if (!attendanceData[selectedDate]) {
       const initialAttendance = {};
@@ -526,76 +602,89 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
   };
 
   const exportToExcel = () => {
-    const exportData = [];
-    const dateArray = [];
-    let currentDate = parseISO(dateRange.start);
-    
-    while (!isAfter(currentDate, parseISO(dateRange.end))) {
-      dateArray.push(format(currentDate, 'yyyy-MM-dd'));
-      currentDate = addDays(currentDate, 1);
-    }
-
-    students.forEach(student => {
-      const studentData = {
-        'Student Name': student.name,
-        'Batch': student.batch,
-      };
-
-      dateArray.forEach(date => {
-        const status = attendanceData[date]?.[student.id] || 'absent';
-        studentData[format(parseISO(date), 'MMM dd, yyyy')] = status;
-      });
-
-      exportData.push(studentData);
-    });
-
-    const ws = xlsxUtils.json_to_sheet(exportData);
-    const wb = xlsxUtils.book_new();
-    xlsxUtils.book_append_sheet(wb, ws, 'Attendance Report');
-    writeFile(wb, 'attendance_report.xlsx');
     handleExportClose();
+    const workbook = xlsxUtils.book_new();
+    
+    // Create worksheet for student data
+    const studentData = filteredStudents.map(student => ({
+      'Name': student.name,
+      'Batch': student.batch,
+      'Fees Month': format(parseISO(student.feesMonth), 'MMMM yyyy'),
+      'Amount': student.amount,
+      'Status': student.status
+    }));
+    const ws = xlsxUtils.json_to_sheet(studentData);
+    xlsxUtils.book_append_sheet(workbook, ws, 'Students');
+
+    // Create worksheet for batch summary
+    const batchData = batchSummary.map(batch => ({
+      'Batch': batch.batch,
+      'Total Students': batch.totalStudents,
+      'Fees Collected': batch.feesCollected,
+      'Pending Amount': batch.pendingAmount,
+      'Collection Rate': `${batch.collectionRate}%`
+    }));
+    const batchWs = xlsxUtils.json_to_sheet(batchData);
+    xlsxUtils.book_append_sheet(workbook, batchWs, 'Batch Summary');
+
+    // Save the file
+    xlsxUtils.writeFile(workbook, 'fees_report.xlsx');
+    setSnackbar({ open: true, message: 'Report exported to Excel successfully', severity: 'success' });
   };
 
   const exportToPDF = () => {
+    handleExportClose();
     const doc = new jsPDF();
     
     // Add title
-    doc.setFontSize(16);
-    doc.text('Attendance Report', 14, 15);
+    doc.setFontSize(18);
+    doc.text('Fees Collection Report', 14, 20);
     doc.setFontSize(12);
-    doc.text(`Period: ${format(parseISO(dateRange.start), 'MMM dd, yyyy')} to ${format(parseISO(dateRange.end), 'MMM dd, yyyy')}`, 14, 25);
+    doc.text(`Generated on ${format(new Date(), 'PPP')}`, 14, 30);
 
-    // Add summary
-    const stats = getAttendanceStats();
-    const summaryData = [
-      ['Total Students', stats.total],
-      ['Average Attendance', `${stats.percentage}%`],
-      ['Selected Batch', selectedBatch === 'all' ? 'All Batches' : `Batch ${selectedBatch}`]
-    ];
-
-    doc.autoTable({
-      head: [['Metric', 'Value']],
-      body: summaryData,
-      startY: 35,
-    });
-
-    // Add attendance data
-    const tableData = students
-      .filter(s => selectedBatch === 'all' || s.batch === selectedBatch)
-      .map(student => [
-        student.name,
-        student.batch,
-        attendanceData[selectedDate]?.[student.id] || 'absent'
-      ]);
+    // Add batch summary
+    doc.setFontSize(14);
+    doc.text('Batch Summary', 14, 45);
+    
+    const batchData = batchSummary.map(batch => [
+      batch.batch,
+      batch.totalStudents.toString(),
+      formatCurrency(batch.feesCollected),
+      formatCurrency(batch.pendingAmount),
+      `${batch.collectionRate}%`
+    ]);
 
     doc.autoTable({
-      head: [['Student Name', 'Batch', 'Status']],
-      body: tableData,
-      startY: doc.lastAutoTable.finalY + 10,
+      startY: 50,
+      head: [['Batch', 'Total Students', 'Collected', 'Pending', 'Collection Rate']],
+      body: batchData,
+      theme: 'grid',
+      headStyles: { fillColor: [25, 118, 210] }
     });
 
-    doc.save('attendance_report.pdf');
-    handleExportClose();
+    // Add student details
+    doc.setFontSize(14);
+    doc.text('Student Details', 14, doc.autoTable.previous.finalY + 15);
+
+    const studentData = filteredStudents.map(student => [
+      student.name,
+      student.batch,
+      format(parseISO(student.feesMonth), 'MMM yyyy'),
+      formatCurrency(student.amount),
+      student.status
+    ]);
+
+    doc.autoTable({
+      startY: doc.autoTable.previous.finalY + 20,
+      head: [['Name', 'Batch', 'Month', 'Amount', 'Status']],
+      body: studentData,
+      theme: 'grid',
+      headStyles: { fillColor: [25, 118, 210] }
+    });
+
+    // Save the PDF
+    doc.save('fees_report.pdf');
+    setSnackbar({ open: true, message: 'Report exported to PDF successfully', severity: 'success' });
   };
 
   const getAttendanceHistory = () => {
@@ -680,11 +769,10 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
     );
 
     const currentTime = new Date();
-    const isLateAttendance = currentTime.getHours() >= 12; // Consider attendance after noon as late
+    const isLateAttendance = currentTime.getHours() >= 12;
 
     return (
       <>
-        {/* Enhanced Controls Section */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} md={3}>
             <TextField
@@ -743,7 +831,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
           </Grid>
         </Grid>
 
-        {/* Enhanced Statistics Cards */}
         <Grid container spacing={2} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
             <Card>
@@ -826,7 +913,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
           </Grid>
         </Grid>
 
-        {/* Bulk Actions */}
         {selectedStudents.length > 0 && (
           <Box sx={{ mb: 2 }}>
             <Paper sx={{ p: 2 }}>
@@ -855,7 +941,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
           </Box>
         )}
 
-        {/* Enhanced Attendance Table */}
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -958,7 +1043,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
 
   const HistoryView = () => (
     <>
-      {/* History & Analytics View */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={8}>
           <Card>
@@ -976,11 +1060,21 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
                     />
                     <YAxis />
                     <RechartsTooltip
-                      formatter={(value, name) => {
-                        if (name === 'percentage') return `${value}%`;
-                        return value;
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div style={{ backgroundColor: '#fff', padding: '10px', border: '1px solid #ccc' }}>
+                              <p>{format(parseISO(label), 'MMMM dd, yyyy')}</p>
+                              {payload.map((entry, index) => (
+                                <p key={index} style={{ color: entry.color }}>
+                                  {entry.name}: {entry.value}%
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
                       }}
-                      labelFormatter={(date) => format(parseISO(date), 'MMMM dd, yyyy')}
                     />
                     <Legend />
                     <Line 
@@ -1039,7 +1133,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
         </Grid>
       </Grid>
 
-      {/* Batch-wise Summary */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
@@ -1125,7 +1218,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
 
       {viewMode === 'daily' ? <DailyView /> : <HistoryView />}
 
-      {/* Export Menu */}
       <Menu
         anchorEl={exportAnchorEl}
         open={Boolean(exportAnchorEl)}
@@ -1145,7 +1237,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
         </MenuItem>
       </Menu>
 
-      {/* Notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
@@ -1164,246 +1255,33 @@ const AttendanceView = React.memo(({ students, uniqueBatches }) => {
   );
 });
 
-const FeesDashboard = () => {
-  const [students, setStudents] = useState([]);
-  const [openReminder, setOpenReminder] = useState(false);
-  const [overdueStudents, setOverdueStudents] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBatch, setSelectedBatch] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedMonth, setSelectedMonth] = useState('all');
-  const [filteredStudents, setFilteredStudents] = useState([]);
-  const [orderBy, setOrderBy] = useState('name');
-  const [order, setOrder] = useState('asc');
+const DetailedView = React.memo(({ 
+  searchQuery, 
+  setSearchQuery, 
+  selectedBatch, 
+  setSelectedBatch, 
+  selectedStatus, 
+  setSelectedStatus, 
+  uniqueBatches, 
+  filteredStudents,
+  orderBy,
+  order,
+  handleSort,
+  getRowStyle,
+  handleMarkAsPaid,
+  handleDeleteStudent,
+  setOpenAddDialog,
+  setSelectedStudent,
+  setOpenEditDialog,
+  batchSummary
+}) => {
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
-  const [selectedTimeRange, setSelectedTimeRange] = useState('3');
-  const [selectedTab, setSelectedTab] = useState(0);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [openAddDialog, setOpenAddDialog] = useState(false);
-  const [newStudent, setNewStudent] = useState({
-    name: '',
-    batch: '',
-    feesMonth: format(new Date(), 'yyyy-MM-dd'),
-    amount: '',
-    status: 'Unpaid'
-  });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
-  const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [editStudent, setEditStudent] = useState({
-    name: '',
-    batch: '',
-    feesMonth: '',
-    amount: '',
-    status: ''
-  });
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  useEffect(() => {
-    // Firebase code (kept for future use)
-    // const fetchStudents = async () => {
-    //   const querySnapshot = await getDocs(collection(db, 'students'));
-    //   const studentsData = querySnapshot.docs.map(doc => ({
-    //     id: doc.id,
-    //     ...doc.data()
-    //   }));
-    //   setStudents(studentsData);
-    //   
-    //   const overdue = studentsData.filter(student => {
-    //     return student.status === 'Unpaid' && isPast(parseISO(student.feesMonth));
-    //   });
-    //   
-    //   if (overdue.length > 0) {
-    //     setOverdueStudents(overdue);
-    //     setOpenReminder(true);
-    //   }
-    // };
-    // fetchStudents();
-
-    // Using dummy data instead
-    setStudents(dummyStudents);
-    const overdue = dummyStudents.filter(student => {
-      return student.status === 'Unpaid' && isPast(parseISO(student.feesMonth));
-    });
-    
-    if (overdue.length > 0) {
-      setOverdueStudents(overdue);
-      setOpenReminder(true);
-    }
-  }, []);
-
-  // Sort function
-  const handleSort = (property) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  };
-
-  const sortStudents = (students) => {
-    return students.sort((a, b) => {
-      let compareResult = 0;
-      switch (orderBy) {
-        case 'name':
-          compareResult = a.name.localeCompare(b.name);
-          break;
-        case 'batch':
-          compareResult = a.batch.localeCompare(b.batch);
-          break;
-        case 'feesMonth':
-          compareResult = isAfter(parseISO(a.feesMonth), parseISO(b.feesMonth)) ? 1 : -1;
-          break;
-        case 'amount':
-          compareResult = a.amount - b.amount;
-          break;
-        case 'status':
-          compareResult = a.status.localeCompare(b.status);
-          break;
-        default:
-          compareResult = 0;
-      }
-      return order === 'asc' ? compareResult : -compareResult;
-    });
-  };
-
-  // Filter students based on search query and selected filters
-  useEffect(() => {
-    let filtered = [...students];
-    
-    // Apply batch filter
-    if (selectedBatch !== 'all') {
-      filtered = filtered.filter(student => student.batch === selectedBatch);
-    }
-    
-    // Apply status filter
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(student => student.status === selectedStatus);
-    }
-
-    // Apply month filter
-    if (selectedMonth !== 'all') {
-      filtered = filtered.filter(student => {
-        const studentMonth = format(parseISO(student.feesMonth), 'MMMM yyyy');
-        return studentMonth === selectedMonth;
-      });
-    }
-    
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(student =>
-        student.name.toLowerCase().includes(query)
-      );
-    }
-    
-    // Apply sorting
-    filtered = sortStudents(filtered);
-    
-    setFilteredStudents(filtered);
-  }, [students, searchQuery, selectedBatch, selectedStatus, selectedMonth, order, orderBy]);
-
-  const handleCloseReminder = () => {
-    setOpenReminder(false);
-  };
-
-  const getRowStyle = (status, feesMonth) => {
-    if (status === 'Unpaid' && isPast(parseISO(feesMonth))) {
-      return { backgroundColor: '#ffebee' }; // Light red background for overdue
-    }
-    return {};
-  };
-
-  // Get unique values for filters
-  const uniqueBatches = [...new Set(students.map(student => student.batch))].sort();
-  const uniqueMonths = [...new Set(students.map(student => 
-    format(parseISO(student.feesMonth), 'MMMM yyyy')
-  ))].sort();
-
-  // Calculate statistics based on filtered students
-  const totalStudents = filteredStudents.length;
-  const totalFees = filteredStudents.reduce((sum, student) => sum + student.amount, 0);
-  const paidStudents = filteredStudents.filter(s => s.status === 'Paid').length;
-  const collectionRate = totalStudents ? (paidStudents / totalStudents) * 100 : 0;
-
-  // Calculate batch-wise summary
-  const getBatchSummary = () => {
-    const summary = {};
-    students.forEach(student => {
-      if (!summary[student.batch]) {
-        summary[student.batch] = {
-          batch: student.batch,
-          totalStudents: 0,
-          feesCollected: 0,
-          pendingAmount: 0,
-          totalAmount: 0
-        };
-      }
-      summary[student.batch].totalStudents += 1;
-      summary[student.batch].totalAmount += student.amount;
-      if (student.status === 'Paid') {
-        summary[student.batch].feesCollected += student.amount;
-      } else {
-        summary[student.batch].pendingAmount += student.amount;
-      }
-    });
-
-    // Calculate collection rate for each batch
-    Object.values(summary).forEach(batch => {
-      batch.collectionRate = (batch.feesCollected / batch.totalAmount) * 100;
-    });
-
-    return Object.values(summary);
-  };
-
-  // Prepare data for charts
-  const batchSummary = getBatchSummary();
-  
-  const chartData = batchSummary.map(batch => ({
-    name: `Batch ${batch.batch}`,
-    collected: batch.feesCollected,
-    pending: batch.pendingAmount
-  }));
-
-  const pieChartData = [
-    { name: 'Paid', value: filteredStudents.filter(s => s.status === 'Paid').length },
-    { name: 'Unpaid', value: filteredStudents.filter(s => s.status === 'Unpaid').length }
-  ];
-
-  // Calculate monthly trends
-  const getMonthlyTrends = () => {
-    const monthlyData = {};
-    students.forEach(student => {
-      const month = format(parseISO(student.feesMonth), 'MMMM yyyy');
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
-          totalFees: 0,
-          collectedFees: 0,
-          pendingFees: 0,
-          totalStudents: 0,
-          paidStudents: 0
-        };
-      }
-      monthlyData[month].totalFees += student.amount;
-      monthlyData[month].totalStudents += 1;
-      if (student.status === 'Paid') {
-        monthlyData[month].collectedFees += student.amount;
-        monthlyData[month].paidStudents += 1;
-      } else {
-        monthlyData[month].pendingFees += student.amount;
-      }
-    });
-
-    return Object.values(monthlyData).sort((a, b) => 
-      parseISO(a.month) - parseISO(b.month)
-    ).slice(-parseInt(selectedTimeRange));
-  };
-
-  // Export functions
   const handleExportClick = (event) => {
     setExportAnchorEl(event.currentTarget);
   };
@@ -1413,117 +1291,169 @@ const FeesDashboard = () => {
   };
 
   const exportToExcel = () => {
-    const exportData = filteredStudents.map(student => ({
-      'Student Name': student.name,
-      'Batch': student.batch,
-      'Month': format(parseISO(student.feesMonth), 'MMMM yyyy'),
-      'Fees Amount': formatCurrency(student.amount),
-      'Status': student.status
-    }));
+    try {
+      handleExportClose();
+      const workbook = xlsxUtils.book_new();
+      
+      // Create worksheet for student data
+      const studentData = filteredStudents.map(student => ({
+        'Student Name': student.name,
+        'Batch': student.batch,
+        'Fees Month': format(parseISO(student.feesMonth), 'MMMM yyyy'),
+        'Amount': student.amount,
+        'Status': student.status
+      }));
+      const ws = xlsxUtils.json_to_sheet(studentData);
+      
+      // Add column widths
+      ws['!cols'] = [
+        { wch: 20 }, // Student Name
+        { wch: 10 }, // Batch
+        { wch: 15 }, // Fees Month
+        { wch: 15 }, // Amount
+        { wch: 10 }  // Status
+      ];
+      
+      xlsxUtils.book_append_sheet(workbook, ws, 'Students');
 
-    const ws = xlsxUtils.json_to_sheet(exportData);
-    const wb = xlsxUtils.book_new();
-    xlsxUtils.book_append_sheet(wb, ws, 'Fees Data');
-    writeFile(wb, 'fees_report.xlsx');
-    handleExportClose();
+      // Create worksheet for batch summary
+      const batchData = batchSummary.map(batch => ({
+        'Batch': batch.batch,
+        'Total Students': batch.totalStudents,
+        'Fees Collected': batch.feesCollected,
+        'Pending Amount': batch.pendingAmount,
+        'Collection Rate': `${Math.round(batch.collectionRate)}%`
+      }));
+      const batchWs = xlsxUtils.json_to_sheet(batchData);
+      
+      // Add column widths for batch summary
+      batchWs['!cols'] = [
+        { wch: 10 }, // Batch
+        { wch: 15 }, // Total Students
+        { wch: 15 }, // Fees Collected
+        { wch: 15 }, // Pending Amount
+        { wch: 15 }  // Collection Rate
+      ];
+      
+      xlsxUtils.book_append_sheet(workbook, batchWs, 'Batch Summary');
+
+      // Save the file
+      writeFile(workbook, 'fees_report.xlsx');
+      setSnackbar({
+        open: true,
+        message: 'Report exported to Excel successfully',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to export to Excel. Please try again.',
+        severity: 'error'
+      });
+    }
   };
 
   const exportToPDF = () => {
-    const doc = new jsPDF();
-    
-    // Add title
-    doc.setFontSize(16);
-    doc.text('Fees Collection Report', 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Generated on ${format(new Date(), 'dd/MM/yyyy')}`, 14, 25);
+    try {
+      handleExportClose();
+      const doc = new jsPDF();
+      
+      // Add title and date
+      doc.setFontSize(18);
+      doc.text('Fees Collection Report', 14, 20);
+      doc.setFontSize(12);
+      doc.text(`Generated on ${format(new Date(), 'PPP')}`, 14, 30);
 
-    // Add batch summary
-    const batchSummaryData = batchSummary.map(batch => [
-      `Batch ${batch.batch}`,
-      batch.totalStudents,
-      formatCurrency(batch.feesCollected),
-      formatCurrency(batch.pendingAmount),
-      `${Math.round(batch.collectionRate)}%`
-    ]);
+      // Add batch summary
+      doc.setFontSize(14);
+      doc.text('Batch Summary', 14, 45);
+      
+      const batchData = batchSummary.map(batch => [
+        batch.batch,
+        batch.totalStudents.toString(),
+        formatCurrency(batch.feesCollected),
+        formatCurrency(batch.pendingAmount),
+        `${Math.round(batch.collectionRate)}%`
+      ]);
 
-    doc.autoTable({
-      head: [['Batch', 'Students', 'Collected', 'Pending', 'Collection Rate']],
-      body: batchSummaryData,
-      startY: 35,
-    });
+      doc.autoTable({
+        startY: 50,
+        head: [['Batch', 'Total Students', 'Collected', 'Pending', 'Collection Rate']],
+        body: batchData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [25, 118, 210],
+          fontSize: 10,
+          halign: 'center'
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { halign: 'left' },
+          1: { halign: 'center' },
+          2: { halign: 'right' },
+          3: { halign: 'right' },
+          4: { halign: 'center' }
+        }
+      });
 
-    // Add student details
-    const studentData = filteredStudents.map(student => [
-      student.name,
-      student.batch,
-      format(parseISO(student.feesMonth), 'MMM yyyy'),
-      formatCurrency(student.amount),
-      student.status
-    ]);
+      // Add student details
+      doc.setFontSize(14);
+      doc.text('Student Details', 14, doc.autoTable.previous.finalY + 15);
 
-    doc.autoTable({
-      head: [['Name', 'Batch', 'Month', 'Amount', 'Status']],
-      body: studentData,
-      startY: doc.lastAutoTable.finalY + 10,
-    });
+      const studentData = filteredStudents.map(student => [
+        student.name,
+        student.batch,
+        format(parseISO(student.feesMonth), 'MMM yyyy'),
+        formatCurrency(student.amount),
+        student.status
+      ]);
 
-    doc.save('fees_report.pdf');
-    handleExportClose();
+      doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 20,
+        head: [['Name', 'Batch', 'Month', 'Amount', 'Status']],
+        body: studentData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [25, 118, 210],
+          fontSize: 10,
+          halign: 'center'
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { halign: 'left' },
+          1: { halign: 'center' },
+          2: { halign: 'center' },
+          3: { halign: 'right' },
+          4: { halign: 'center' }
+        }
+      });
+
+      // Save the PDF
+      doc.save('fees_report.pdf');
+      setSnackbar({
+        open: true,
+        message: 'Report exported to PDF successfully',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to export to PDF. Please try again.',
+        severity: 'error'
+      });
+    }
   };
 
-  const exportToCSV = () => {
-    const exportData = filteredStudents.map(student => 
-      `${student.name},${student.batch},${format(parseISO(student.feesMonth), 'MMMM yyyy')},${student.amount},${student.status}`
-    ).join('\n');
-    
-    const header = 'Student Name,Batch,Month,Amount,Status\n';
-    const blob = new Blob([header + exportData], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'fees_report.csv';
-    a.click();
-    handleExportClose();
-  };
-
-  const monthlyTrends = getMonthlyTrends();
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const drawerWidth = 240;
-
-  const drawer = (
-    <Box sx={{ overflow: 'auto' }}>
-      <Logo />
-      <Divider />
-      <List>
-        <ListItem button selected={selectedTab === 0} onClick={() => setSelectedTab(0)}>
-          <ListItemIcon>
-            <TableChartIcon />
-          </ListItemIcon>
-          <ListItemText primary="Detailed View" />
-        </ListItem>
-        <ListItem button selected={selectedTab === 1} onClick={() => setSelectedTab(1)}>
-          <ListItemIcon>
-            <InsertChartIcon />
-          </ListItemIcon>
-          <ListItemText primary="Visualizations" />
-        </ListItem>
-        <ListItem button selected={selectedTab === 2} onClick={() => setSelectedTab(2)}>
-          <ListItemIcon>
-            <TodayIcon />
-          </ListItemIcon>
-          <ListItemText primary="Attendance" />
-        </ListItem>
-      </List>
-    </Box>
-  );
-
-  const DetailedView = React.memo(() => (
+  return (
     <>
-      {/* Search and Filter Section */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
           <TextField
@@ -1586,7 +1516,6 @@ const FeesDashboard = () => {
         </Grid>
       </Grid>
 
-      {/* Add Student FAB */}
       <Fab 
         color="primary" 
         sx={{ 
@@ -1594,13 +1523,12 @@ const FeesDashboard = () => {
           bottom: 16, 
           right: 16 
         }}
-        onClick={handleAddDialogOpen}
+        onClick={() => setOpenAddDialog(true)}
         aria-label="add student"
       >
         <AddIcon />
       </Fab>
 
-      {/* Students Table */}
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="fees table">
           <TableHead>
@@ -1675,7 +1603,10 @@ const FeesDashboard = () => {
                     <Tooltip title="Edit">
                       <IconButton 
                         size="small" 
-                        onClick={() => handleEditDialogOpen(student)}
+                        onClick={() => {
+                          setSelectedStudent(student);
+                          setOpenEditDialog(true);
+                        }}
                       >
                         <EditIcon />
                       </IconButton>
@@ -1706,7 +1637,7 @@ const FeesDashboard = () => {
             ))}
             {filteredStudents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">
                     No students found matching your search criteria
                   </Typography>
@@ -1717,7 +1648,6 @@ const FeesDashboard = () => {
         </Table>
       </TableContainer>
 
-      {/* Export Menu */}
       <Menu
         anchorEl={exportAnchorEl}
         open={Boolean(exportAnchorEl)}
@@ -1735,24 +1665,66 @@ const FeesDashboard = () => {
           </ListItemIcon>
           Export to PDF
         </MenuItem>
-        <MenuItem onClick={exportToCSV}>
-          <ListItemIcon>
-            <InsertDriveFileOutlined />
-          </ListItemIcon>
-          Export to CSV
-        </MenuItem>
       </Menu>
     </>
-  ));
+  );
+});
 
-  const VisualizationsView = () => (
+const VisualizationsView = React.memo(({ 
+  filteredStudents, 
+  students, 
+  batchSummary, 
+  selectedTimeRange 
+}) => {
+  const currentMetrics = {
+    totalStudents: filteredStudents.length,
+    totalFees: filteredStudents.reduce((sum, student) => sum + student.amount, 0),
+    overdueCount: filteredStudents.filter(student => 
+      student.status === 'Unpaid' && isPast(parseISO(student.feesMonth))
+    ).length,
+    collectionRate: filteredStudents.length > 0 
+      ? (filteredStudents.filter(s => s.status === 'Paid').length / filteredStudents.length) * 100 
+      : 0
+  };
+
+  const getMonthlyTrends = () => {
+    const monthlyData = {};
+    students.forEach(student => {
+      const month = format(parseISO(student.feesMonth), 'MMMM yyyy');
+      if (!monthlyData[month]) {
+        monthlyData[month] = {
+          month,
+          totalFees: 0,
+          collectedFees: 0,
+          pendingFees: 0,
+          totalStudents: 0,
+          paidStudents: 0
+        };
+      }
+      monthlyData[month].totalFees += student.amount;
+      monthlyData[month].totalStudents += 1;
+      if (student.status === 'Paid') {
+        monthlyData[month].collectedFees += student.amount;
+        monthlyData[month].paidStudents += 1;
+      } else {
+        monthlyData[month].pendingFees += student.amount;
+      }
+    });
+
+    return Object.values(monthlyData).sort((a, b) => 
+      parseISO(a.month) - parseISO(b.month)
+    ).slice(-parseInt(selectedTimeRange));
+  };
+
+  const monthlyTrends = getMonthlyTrends();
+
+  return (
     <>
-      {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Students"
-            value={totalStudents}
+            value={currentMetrics.totalStudents}
             icon={<GroupOutlined sx={{ color: '#1976d2' }} />}
             color="#1976d2"
           />
@@ -1760,7 +1732,7 @@ const FeesDashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Total Fees"
-            value={`$${totalFees}`}
+            value={formatCurrency(currentMetrics.totalFees)}
             icon={<PaidOutlined sx={{ color: '#2e7d32' }} />}
             color="#2e7d32"
           />
@@ -1768,7 +1740,7 @@ const FeesDashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Overdue"
-            value={overdueStudents.length}
+            value={currentMetrics.overdueCount}
             icon={<WarningAmberOutlined sx={{ color: '#d32f2f' }} />}
             color="#d32f2f"
           />
@@ -1776,14 +1748,13 @@ const FeesDashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Collection Rate"
-            value={`${Math.round(collectionRate)}%`}
+            value={`${Math.round(currentMetrics.collectionRate)}%`}
             icon={<TrendingUpOutlined sx={{ color: '#7b1fa2' }} />}
             color="#7b1fa2"
           />
         </Grid>
       </Grid>
 
-      {/* Batch Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {batchSummary.map((batch) => (
           <Grid item xs={12} sm={6} md={3} key={batch.batch}>
@@ -1792,126 +1763,289 @@ const FeesDashboard = () => {
         ))}
       </Grid>
 
-      {/* Charts Section */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
-          <Card>
+          <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">Monthly Collection Trends</Typography>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                  <Select
-                    value={selectedTimeRange}
-                    onChange={(e) => setSelectedTimeRange(e.target.value)}
-                  >
-                    <MenuItem value="3">Last 3 Months</MenuItem>
-                    <MenuItem value="6">Last 6 Months</MenuItem>
-                    <MenuItem value="12">Last 12 Months</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <RechartsTooltip formatter={(value) => formatCurrency(value)} />
-                    <Legend />
-                    <Area 
-                      type="monotone" 
-                      dataKey="collectedFees" 
-                      name="Collected" 
-                      stackId="1"
-                      fill="#00C49F" 
-                      stroke="#00C49F"
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="pendingFees" 
-                      name="Pending" 
-                      stackId="1"
-                      fill="#FF8042" 
-                      stroke="#FF8042"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Box>
+              <Typography variant="h6" gutterBottom>Monthly Collection Trends</Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={monthlyTrends}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <RechartsTooltip
+                    formatter={(value) => formatCurrency(value)}
+                    labelFormatter={(date) => date}
+                  />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="collectedFees"
+                    stackId="1"
+                    stroke="#4caf50"
+                    fill="#4caf50"
+                    name="Collected"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="pendingFees"
+                    stackId="1"
+                    stroke="#ff9800"
+                    fill="#ff9800"
+                    name="Pending"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Collection Rate by Batch
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={batchSummary}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" domain={[0, 100]} unit="%" />
-                    <YAxis dataKey="batch" type="category" />
-                    <RechartsTooltip formatter={(value) => `${value}%`} />
-                    <Bar 
-                      dataKey="collectionRate" 
-                      fill="#8884d8"
-                      name="Collection Rate"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
+              <Typography variant="h6" gutterBottom>Collection Rate by Batch</Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={batchSummary}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, 100]} unit="%" />
+                  <YAxis dataKey="batch" type="category" />
+                  <RechartsTooltip
+                    formatter={(value) => `${value}%`}
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey="collectionRate"
+                    fill="#2196f3"
+                    name="Collection Rate"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={12}>
-          <Card>
+          <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Monthly Student Payment Status
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <RechartsTooltip />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="paidStudents" 
-                      name="Paid Students" 
-                      stroke="#00C49F"
-                      strokeWidth={2}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="totalStudents" 
-                      name="Total Students" 
-                      stroke="#8884d8"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Box>
+              <Typography variant="h6" gutterBottom>Monthly Student Payment Status</Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyTrends}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <RechartsTooltip
+                    formatter={(value) => value}
+                    labelFormatter={(date) => date}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="paidStudents"
+                    stroke="#4caf50"
+                    name="Paid Students"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="totalStudents"
+                    stroke="#2196f3"
+                    name="Total Students"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
     </>
   );
+});
 
-  // Add Student Dialog handlers
-  const handleAddDialogOpen = () => {
-    setOpenAddDialog(true);
-  };
+const FeesDashboard = () => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  // State declarations
+  const [students, setStudents] = useState(dummyStudents);
+  const [openReminder, setOpenReminder] = useState(false);
+  const [overdueStudents, setOverdueStudents] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [filteredStudents, setFilteredStudents] = useState([]);
+  const [orderBy, setOrderBy] = useState('name');
+  const [order, setOrder] = useState('asc');
+  const [exportAnchorEl, setExportAnchorEl] = useState(null);
+  const [selectedTimeRange, setSelectedTimeRange] = useState('3');
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    name: '',
+    batch: '',
+    feesMonth: format(new Date(), 'yyyy-MM-dd'),
+    amount: '',
+    status: 'Unpaid'
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [editStudent, setEditStudent] = useState({
+    name: '',
+    batch: '',
+    feesMonth: '',
+    amount: '',
+    status: ''
+  });
+  const [openLogoutDialog, setOpenLogoutDialog] = useState(false);
+  const [sessionTimeout, setSessionTimeout] = useState(null);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const [anchorElProfile, setAnchorElProfile] = useState(null);
+  const [userProfile] = useState({
+    name: 'Admin User',
+    email: 'admin@example.com',
+    role: 'Administrator'
+  });
 
-  const handleAddDialogClose = () => {
+  // Session timeout constants
+  const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000; // 30 minutes
+  const SESSION_WARNING_TIME = 5 * 60 * 1000; // 5 minutes warning
+
+  // Initialize students and check for overdue
+  useEffect(() => {
+    const overdue = students.filter(student => 
+      student.status === 'Unpaid' && isPast(parseISO(student.feesMonth))
+    );
+    setOverdueStudents(overdue);
+    if (overdue.length > 0) {
+      setOpenReminder(true);
+    }
+  }, [students]);
+
+  // Filter and sort students
+  useEffect(() => {
+    let filtered = [...students];
+    
+    if (selectedBatch !== 'all') {
+      filtered = filtered.filter(student => student.batch === selectedBatch);
+    }
+    
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(student => student.status === selectedStatus);
+    }
+
+    if (selectedMonth !== 'all') {
+      filtered = filtered.filter(student => {
+        const studentMonth = format(parseISO(student.feesMonth), 'MMMM yyyy');
+        return studentMonth === selectedMonth;
+      });
+    }
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(student =>
+        student.name.toLowerCase().includes(query)
+      );
+    }
+    
+    filtered.sort((a, b) => {
+      let compareResult = 0;
+      switch (orderBy) {
+        case 'name':
+          compareResult = a.name.localeCompare(b.name);
+          break;
+        case 'batch':
+          compareResult = a.batch.localeCompare(b.batch);
+          break;
+        case 'feesMonth':
+          compareResult = isAfter(parseISO(a.feesMonth), parseISO(b.feesMonth)) ? 1 : -1;
+          break;
+        case 'amount':
+          compareResult = a.amount - b.amount;
+          break;
+        case 'status':
+          compareResult = a.status.localeCompare(b.status);
+          break;
+        default:
+          compareResult = 0;
+      }
+      return order === 'asc' ? compareResult : -compareResult;
+    });
+    
+    setFilteredStudents(filtered);
+  }, [students, searchQuery, selectedBatch, selectedStatus, selectedMonth, orderBy, order]);
+
+  // Session timeout effect
+  useEffect(() => {
+    const handleSessionTimeout = () => {
+      localStorage.removeItem('isAuthenticated');
+      navigate('/');
+      setSnackbar({
+        open: true,
+        message: 'Session expired. Please log in again.',
+        severity: 'warning'
+      });
+    };
+
+    const resetSessionTimeout = () => {
+      if (sessionTimeout) {
+        clearTimeout(sessionTimeout);
+      }
+      
+      const warningTimeout = setTimeout(() => {
+        setShowSessionWarning(true);
+      }, SESSION_TIMEOUT_DURATION - SESSION_WARNING_TIME);
+
+      const timeout = setTimeout(() => {
+        handleSessionTimeout();
+      }, SESSION_TIMEOUT_DURATION);
+
+      setSessionTimeout(timeout);
+
+      return () => {
+        clearTimeout(warningTimeout);
+        clearTimeout(timeout);
+      };
+    };
+
+    const handleUserActivity = () => {
+      resetSessionTimeout();
+      setShowSessionWarning(false);
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      window.addEventListener(event, handleUserActivity);
+    });
+
+    resetSessionTimeout();
+
+    return () => {
+      if (sessionTimeout) {
+        clearTimeout(sessionTimeout);
+      }
+      events.forEach(event => {
+        window.removeEventListener(event, handleUserActivity);
+      });
+    };
+  }, [sessionTimeout, navigate]);
+
+  // Handlers for student management
+  const handleAddStudent = () => {
+    const newId = (Math.max(...students.map(s => parseInt(s.id, 10))) + 1).toString();
+    const formattedStudent = {
+      ...newStudent,
+      id: newId,
+      amount: parseFloat(newStudent.amount)
+    };
+    setStudents(prev => [...prev, formattedStudent]);
     setOpenAddDialog(false);
     setNewStudent({
       name: '',
@@ -1920,27 +2054,6 @@ const FeesDashboard = () => {
       amount: '',
       status: 'Unpaid'
     });
-  };
-
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
-    setNewStudent(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleAddStudent = () => {
-    const newId = (Math.max(...students.map(s => parseInt(s.id, 10))) + 1).toString();
-    
-    const formattedStudent = {
-      ...newStudent,
-      id: newId,
-      amount: parseFloat(newStudent.amount)
-    };
-
-    setStudents(prev => [...prev, formattedStudent]);
-    handleAddDialogClose();
     setSnackbar({
       open: true,
       message: `Student ${formattedStudent.name} has been successfully added`,
@@ -1948,26 +2061,12 @@ const FeesDashboard = () => {
     });
   };
 
-  const handleSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
-
-  const handleEditDialogOpen = (student) => {
-    setSelectedStudent(student);
-    setEditStudent({
-      name: student.name,
-      batch: student.batch,
-      feesMonth: student.feesMonth,
-      amount: student.amount,
-      status: student.status
-    });
-    setOpenEditDialog(true);
-  };
-
-  const handleEditDialogClose = () => {
+  const handleUpdateStudent = () => {
+    setStudents(prev => prev.map(student => 
+      student.id === selectedStudent.id 
+        ? { ...student, ...editStudent, amount: parseFloat(editStudent.amount) }
+        : student
+    ));
     setOpenEditDialog(false);
     setSelectedStudent(null);
     setEditStudent({
@@ -1977,29 +2076,25 @@ const FeesDashboard = () => {
       amount: '',
       status: ''
     });
-  };
-
-  const handleEditInputChange = (event) => {
-    const { name, value } = event.target;
-    setEditStudent(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleUpdateStudent = () => {
-    setStudents(prev => prev.map(student => 
-      student.id === selectedStudent.id 
-        ? { ...student, ...editStudent }
-        : student
-    ));
-    handleEditDialogClose();
     setSnackbar({
       open: true,
       message: `Student ${editStudent.name}'s details have been updated`,
       severity: 'success'
     });
   };
+
+  // Add effect to populate edit form when selectedStudent changes
+  useEffect(() => {
+    if (selectedStudent) {
+      setEditStudent({
+        name: selectedStudent.name,
+        batch: selectedStudent.batch,
+        feesMonth: selectedStudent.feesMonth,
+        amount: selectedStudent.amount.toString(),
+        status: selectedStudent.status
+      });
+    }
+  }, [selectedStudent]);
 
   const handleMarkAsPaid = (student) => {
     setStudents(prev => prev.map(s => 
@@ -2025,17 +2120,157 @@ const FeesDashboard = () => {
     }
   };
 
+  // Utility functions
+  const handleSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const getRowStyle = (status, feesMonth) => {
+    if (status === 'Unpaid' && isPast(parseISO(feesMonth))) {
+      return { backgroundColor: '#ffebee' };
+    }
+    return {};
+  };
+
+  // Derived data
+  const uniqueBatches = useMemo(() => 
+    Array.from(new Set(students.map(student => student.batch))).sort(),
+    [students]
+  );
+  const uniqueMonths = useMemo(() => 
+    Array.from(new Set(students.map(student => 
+      format(parseISO(student.feesMonth), 'MMMM yyyy')
+    ))).sort(),
+    [students]
+  );
+
+  const batchSummary = useMemo(() => {
+    return uniqueBatches.map(batch => {
+      const batchStudents = students.filter(s => s.batch === batch);
+      const totalAmount = batchStudents.reduce((sum, s) => sum + s.amount, 0);
+      const paidAmount = batchStudents
+        .filter(s => s.status === 'Paid')
+        .reduce((sum, s) => sum + s.amount, 0);
+      
+      return {
+        batch,
+        totalStudents: batchStudents.length,
+        feesCollected: paidAmount,
+        pendingAmount: totalAmount - paidAmount,
+        collectionRate: (paidAmount / totalAmount) * 100 || 0
+      };
+    });
+  }, [students, uniqueBatches]);
+
+  const drawerWidth = 240;
+
+  const drawer = (
+    <Box sx={{ overflow: 'auto' }}>
+      <Logo />
+      <Divider />
+      <List>
+        <ListItem button selected={selectedTab === 0} onClick={() => setSelectedTab(0)}>
+          <ListItemIcon>
+            <TableChartIcon />
+          </ListItemIcon>
+          <ListItemText primary="Detailed View" />
+        </ListItem>
+        <ListItem button selected={selectedTab === 1} onClick={() => setSelectedTab(1)}>
+          <ListItemIcon>
+            <InsertChartIcon />
+          </ListItemIcon>
+          <ListItemText primary="Visualizations" />
+        </ListItem>
+        <ListItem button selected={selectedTab === 2} onClick={() => setSelectedTab(2)}>
+          <ListItemIcon>
+            <TodayIcon />
+          </ListItemIcon>
+          <ListItemText primary="Attendance" />
+        </ListItem>
+      </List>
+    </Box>
+  );
+
   const mainContent = () => {
     switch(selectedTab) {
       case 0:
-        return <DetailedView />;
+        return <DetailedView 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedBatch={selectedBatch}
+          setSelectedBatch={setSelectedBatch}
+          selectedStatus={selectedStatus}
+          setSelectedStatus={setSelectedStatus}
+          uniqueBatches={uniqueBatches}
+          filteredStudents={filteredStudents}
+          orderBy={orderBy}
+          order={order}
+          handleSort={handleSort}
+          getRowStyle={getRowStyle}
+          handleMarkAsPaid={handleMarkAsPaid}
+          handleDeleteStudent={handleDeleteStudent}
+          setOpenAddDialog={setOpenAddDialog}
+          setSelectedStudent={setSelectedStudent}
+          setOpenEditDialog={setOpenEditDialog}
+          batchSummary={batchSummary}
+        />;
       case 1:
-        return <VisualizationsView />;
+        return <VisualizationsView 
+          filteredStudents={filteredStudents}
+          students={students}
+          batchSummary={batchSummary}
+          selectedTimeRange={selectedTimeRange}
+        />;
       case 2:
-        return <AttendanceView students={students} uniqueBatches={uniqueBatches} />;
+        return <AttendanceView 
+          students={students} 
+          uniqueBatches={uniqueBatches} 
+          batchSummary={batchSummary}
+        />;
       default:
         return <DetailedView />;
     }
+  };
+
+  const handleProfileClick = (event) => {
+    setAnchorElProfile(event.currentTarget);
+  };
+
+  const handleProfileClose = () => {
+    setAnchorElProfile(null);
+  };
+
+  const handleLogoutClick = () => {
+    handleProfileClose();
+    setOpenLogoutDialog(true);
+  };
+
+  const handleLogoutCancel = () => {
+    setOpenLogoutDialog(false);
+  };
+
+  const handleLogoutConfirm = () => {
+    localStorage.removeItem('isAuthenticated');
+    navigate('/');
+    setSnackbar({ open: true, message: 'Logged out successfully!', severity: 'success' });
+  };
+
+  const handleExtendSession = () => {
+    setShowSessionWarning(false);
+    if (sessionTimeout) {
+      clearTimeout(sessionTimeout);
+    }
+    const newTimeout = setTimeout(() => {
+      setShowSessionWarning(true);
+    }, 55 * 60 * 1000); // Show warning 5 minutes before session expires
+    setSessionTimeout(newTimeout);
+  };
+
+  const handleLogoutNow = () => {
+    setShowSessionWarning(false);
+    handleLogoutConfirm();
   };
 
   return (
@@ -2047,21 +2282,81 @@ const FeesDashboard = () => {
           ml: { md: `${drawerWidth}px` },
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            {selectedTab === 0 ? 'Detailed View' : selectedTab === 1 ? 'Visualizations' : 'Attendance'}
-          </Typography>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={() => setMobileOpen(true)}
+              sx={{ mr: 2, display: { md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap component="div">
+              {selectedTab === 0 ? 'Detailed View' : selectedTab === 1 ? 'Visualizations' : 'Attendance'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <IconButton
+              size="large"
+              edge="end"
+              color="inherit"
+              onClick={handleProfileClick}
+            >
+              <Avatar sx={{ bgcolor: 'primary.dark' }}>
+                {userProfile.name.charAt(0)}
+              </Avatar>
+            </IconButton>
+          </Box>
         </Toolbar>
       </AppBar>
+
+      {/* Add Profile Menu */}
+      <Menu
+        anchorEl={anchorElProfile}
+        open={Boolean(anchorElProfile)}
+        onClose={handleProfileClose}
+        onClick={handleProfileClose}
+        PaperProps={{
+          sx: { minWidth: 200 }
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem>
+          <ListItemAvatar>
+            <Avatar sx={{ bgcolor: 'primary.dark' }}>
+              {userProfile.name.charAt(0)}
+            </Avatar>
+          </ListItemAvatar>
+          <ListItemText 
+            primary={userProfile.name}
+            secondary={userProfile.email}
+          />
+        </MenuItem>
+        <Divider />
+        <MenuItem>
+          <ListItemIcon>
+            <AccountCircleIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="My Profile" />
+        </MenuItem>
+        <MenuItem>
+          <ListItemIcon>
+            <SettingsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Settings" />
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={handleLogoutClick}>
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText primary="Logout" sx={{ color: 'error.main' }} />
+        </MenuItem>
+      </Menu>
 
       <Box
         component="nav"
@@ -2070,9 +2365,9 @@ const FeesDashboard = () => {
         <Drawer
           variant="temporary"
           open={mobileOpen}
-          onClose={handleDrawerToggle}
+          onClose={() => setMobileOpen(false)}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', md: 'none' },
@@ -2098,17 +2393,17 @@ const FeesDashboard = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          mt: 8
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          marginLeft: { sm: `${drawerWidth}px` }
         }}
       >
+        <Toolbar />
         {mainContent()}
       </Box>
 
-      {/* Reminder Dialog */}
       <Dialog 
         open={openReminder} 
-        onClose={handleCloseReminder}
+        onClose={() => setOpenReminder(false)}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -2134,47 +2429,89 @@ const FeesDashboard = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseReminder} variant="contained" color="primary">
+          <Button onClick={() => setOpenReminder(false)} variant="contained" color="primary">
             Close
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Add Student Dialog */}
       <AddStudentDialog
         open={openAddDialog}
-        onClose={handleAddDialogClose}
+        onClose={() => setOpenAddDialog(false)}
         onAdd={handleAddStudent}
         uniqueBatches={uniqueBatches}
         newStudent={newStudent}
-        onInputChange={handleInputChange}
+        onInputChange={(e) => setNewStudent(prev => ({ ...prev, [e.target.name]: e.target.value }))}
       />
 
-      {/* Edit Student Dialog */}
       <EditStudentDialog
         open={openEditDialog}
-        onClose={handleEditDialogClose}
+        onClose={() => setOpenEditDialog(false)}
         onUpdate={handleUpdateStudent}
         uniqueBatches={uniqueBatches}
         editStudent={editStudent}
-        onInputChange={handleEditInputChange}
+        onInputChange={(e) => setEditStudent(prev => ({ ...prev, [e.target.name]: e.target.value }))}
       />
 
-      {/* Success Notification */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
-        onClose={handleSnackbarClose}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <MuiAlert 
-          onClose={handleSnackbarClose} 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >
           {snackbar.message}
         </MuiAlert>
       </Snackbar>
+
+      <Dialog
+        open={openLogoutDialog}
+        onClose={handleLogoutCancel}
+        aria-labelledby="logout-dialog-title"
+        aria-describedby="logout-dialog-description"
+      >
+        <DialogTitle id="logout-dialog-title">
+          Confirm Logout
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="logout-dialog-description">
+            Are you sure you want to log out? Any unsaved changes will be lost.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutCancel}>Cancel</Button>
+          <Button onClick={handleLogoutConfirm} color="error" variant="contained">
+            Logout
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showSessionWarning}
+        aria-labelledby="session-warning-dialog-title"
+        aria-describedby="session-warning-dialog-description"
+      >
+        <DialogTitle id="session-warning-dialog-title">
+          Session Timeout Warning
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="session-warning-dialog-description">
+            Your session will expire in 5 minutes due to inactivity. Would you like to extend your session?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleLogoutNow} color="error">
+            Logout Now
+          </Button>
+          <Button onClick={handleExtendSession} color="primary" variant="contained">
+            Extend Session
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
