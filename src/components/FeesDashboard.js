@@ -111,59 +111,7 @@ import {
 } from 'recharts';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-
-const dummyStudents = [
-  // April 2025 Students
-  { id: '1-apr', name: 'John Doe', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
-  { id: '2-apr', name: 'Jane Smith', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
-  { id: '3-apr', name: 'Alice Johnson', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
-  { id: '10-apr', name: 'Peter Parker', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
-  { id: '4-apr', name: 'Mike Johnson', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Unpaid' },
-  { id: '5-apr', name: 'Sarah Williams', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Unpaid' },
-  { id: '6-apr', name: 'Tom Wilson', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Unpaid' },
-  { id: '11-apr', name: 'Mary Jane', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Paid' },
-  { id: '7-apr', name: 'Robert Brown', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Unpaid' },
-  { id: '8-apr', name: 'Emily Davis', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Unpaid' },
-  { id: '9-apr', name: 'James Miller', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Paid' },
-  { id: '12-apr', name: 'David Clark', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Unpaid' },
-  { id: '13-apr', name: 'Lisa Anderson', batch: 'Freestyle-Toddler', feesMonth: '2025-04-15', amount: 50000, status: 'Unpaid' },
-  { id: '14-apr', name: 'Kevin White', batch: 'Freestyle-Toddler', feesMonth: '2025-04-15', amount: 50000, status: 'Unpaid' },
-  { id: '15-apr', name: 'Susan Brown', batch: 'Freestyle-Toddler', feesMonth: '2025-04-15', amount: 50000, status: 'Paid' },
-  
-  // March 2025 Students
-  { id: '1-mar', name: 'John Doe', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Paid' },
-  { id: '2-mar', name: 'Jane Smith', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Paid' },
-  { id: '3-mar', name: 'Alice Johnson', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Paid' },
-  { id: '10-mar', name: 'Peter Parker', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Unpaid' },
-  { id: '4-mar', name: 'Mike Johnson', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Paid' },
-  { id: '5-mar', name: 'Sarah Williams', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Paid' },
-  { id: '6-mar', name: 'Tom Wilson', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Unpaid' },
-  { id: '11-mar', name: 'Mary Jane', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Paid' },
-  { id: '7-mar', name: 'Robert Brown', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Paid' },
-  { id: '8-mar', name: 'Emily Davis', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Paid' },
-  { id: '9-mar', name: 'James Miller', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Paid' },
-  { id: '12-mar', name: 'David Clark', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Unpaid' },
-  { id: '13-mar', name: 'Lisa Anderson', batch: 'Freestyle-Toddler', feesMonth: '2025-03-15', amount: 50000, status: 'Paid' },
-  { id: '14-mar', name: 'Kevin White', batch: 'Freestyle-Toddler', feesMonth: '2025-03-15', amount: 50000, status: 'Paid' },
-  { id: '15-mar', name: 'Susan Brown', batch: 'Freestyle-Toddler', feesMonth: '2025-03-15', amount: 50000, status: 'Paid' },
-  
-  // February 2025 Students
-  { id: '1-feb', name: 'John Doe', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
-  { id: '2-feb', name: 'Jane Smith', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
-  { id: '3-feb', name: 'Alice Johnson', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
-  { id: '10-feb', name: 'Peter Parker', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
-  { id: '4-feb', name: 'Mike Johnson', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
-  { id: '5-feb', name: 'Sarah Williams', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
-  { id: '6-feb', name: 'Tom Wilson', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
-  { id: '11-feb', name: 'Mary Jane', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
-  { id: '7-feb', name: 'Robert Brown', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
-  { id: '8-feb', name: 'Emily Davis', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
-  { id: '9-feb', name: 'James Miller', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
-  { id: '12-feb', name: 'David Clark', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
-  { id: '13-feb', name: 'Lisa Anderson', batch: 'Freestyle-Toddler', feesMonth: '2025-02-15', amount: 50000, status: 'Paid' },
-  { id: '14-feb', name: 'Kevin White', batch: 'Freestyle-Toddler', feesMonth: '2025-02-15', amount: 50000, status: 'Paid' },
-  { id: '15-feb', name: 'Susan Brown', batch: 'Freestyle-Toddler', feesMonth: '2025-02-15', amount: 50000, status: 'Paid' }
-];
+import api from '../services/api';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
@@ -1976,7 +1924,7 @@ const FeesDashboard = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   // Remove openReminder state
-  const [students, setStudents] = useState(dummyStudents);
+  const [students, setStudents] = useState([]);
   const [overdueStudents, setOverdueStudents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('all');
@@ -2020,6 +1968,8 @@ const FeesDashboard = () => {
     email: 'admin@example.com',
     role: 'Administrator'
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Session timeout constants
   const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000; // 30 minutes
@@ -2146,50 +2096,50 @@ const FeesDashboard = () => {
     };
   }, [sessionTimeout, navigate]);
 
-  // Handlers for student management
-  const handleAddStudent = () => {
-    const newId = `${Date.now()}`; // Use timestamp for unique ID
-    const formattedStudent = {
-      ...newStudent,
-      id: newId,
-      amount: parseFloat(newStudent.amount)
+  // Fetch students from API
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getStudents();
+        setStudents(data);
+        setError(null);
+      } catch (err) {
+        setError('Failed to fetch students data');
+        console.error('Error fetching students:', err);
+      } finally {
+        setLoading(false);
+      }
     };
-    setStudents(prev => [formattedStudent, ...prev]); // Add new student at the beginning of the array
-    setOpenAddDialog(false);
-    setNewStudent({
-      name: '',
-      batch: '',
-      feesMonth: format(new Date(), 'yyyy-MM-dd'),
-      amount: '',
-      status: 'Unpaid'
-    });
-    setSnackbar({
-      open: true,
-      message: `Student ${formattedStudent.name} has been successfully added`,
-      severity: 'success'
-    });
+
+    fetchStudents();
+  }, []);
+
+  // Handlers for student management
+  const handleAddStudent = async (studentData) => {
+    try {
+      await api.addStudent(studentData);
+      // Refresh students data
+      const updatedStudents = await api.getStudents();
+      setStudents(updatedStudents);
+      setOpenAddDialog(false);
+      setSnackbar({ open: true, message: 'Student added successfully', severity: 'success' });
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Failed to add student', severity: 'error' });
+    }
   };
 
-  const handleUpdateStudent = () => {
-    setStudents(prev => prev.map(student => 
-      student.id === selectedStudent.id 
-        ? { ...student, ...editStudent, amount: parseFloat(editStudent.amount) }
-        : student
-    ));
-    setOpenEditDialog(false);
-    setSelectedStudent(null);
-    setEditStudent({
-      name: '',
-      batch: '',
-      feesMonth: '',
-      amount: '',
-      status: ''
-    });
-    setSnackbar({
-      open: true,
-      message: `Student ${editStudent.name}'s details have been updated`,
-      severity: 'success'
-    });
+  const handleUpdateStudent = async (studentId, studentData) => {
+    try {
+      await api.updateStudent(studentId, studentData);
+      // Refresh students data
+      const updatedStudents = await api.getStudents();
+      setStudents(updatedStudents);
+      setOpenEditDialog(false);
+      setSnackbar({ open: true, message: 'Student updated successfully', severity: 'success' });
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Failed to update student', severity: 'error' });
+    }
   };
 
   // Add effect to populate edit form when selectedStudent changes
@@ -2205,27 +2155,35 @@ const FeesDashboard = () => {
     }
   }, [selectedStudent]);
 
-  const handleMarkAsPaid = (student) => {
-    setStudents(prev => prev.map(s => 
-      s.id === student.id 
-        ? { ...s, status: 'Paid' }
-        : s
-    ));
-    setSnackbar({
-      open: true,
-      message: `${student.name}'s fees has been marked as paid`,
-      severity: 'success'
-    });
+  const handleMarkAsPaid = async (student) => {
+    try {
+      await api.markAsPaid(student.id);
+      // Refresh students data
+      const updatedStudents = await api.getStudents();
+      setStudents(updatedStudents);
+      setSnackbar({ 
+        open: true, 
+        message: `${student.name}'s payment has been marked as paid`, 
+        severity: 'success' 
+      });
+    } catch (error) {
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to update payment status', 
+        severity: 'error' 
+      });
+    }
   };
 
-  const handleDeleteStudent = (student) => {
-    if (window.confirm(`Are you sure you want to delete ${student.name}'s record?`)) {
-      setStudents(prev => prev.filter(s => s.id !== student.id));
-      setSnackbar({
-        open: true,
-        message: `${student.name}'s record has been deleted`,
-        severity: 'info'
-      });
+  const handleDeleteStudent = async (studentId) => {
+    try {
+      await api.deleteStudent(studentId);
+      // Refresh students data
+      const updatedStudents = await api.getStudents();
+      setStudents(updatedStudents);
+      setSnackbar({ open: true, message: 'Student deleted successfully', severity: 'success' });
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Failed to delete student', severity: 'error' });
     }
   };
 
@@ -2381,6 +2339,23 @@ const FeesDashboard = () => {
     setShowSessionWarning(false);
     handleLogoutConfirm();
   };
+
+  // Add loading state handling in the render
+  if (loading) {
+    return (
+      <Box sx={{ width: '100%', mt: 4 }}>
+        <LinearProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ width: '100%', mt: 4 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: 'flex' }}>
