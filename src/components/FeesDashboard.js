@@ -113,21 +113,56 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
 const dummyStudents = [
-  { id: '1', name: 'John Doe', batch: '2024A', feesMonth: '2024-02-15', amount: 45000, status: 'Paid' },
-  { id: '2', name: 'Jane Smith', batch: '2024A', feesMonth: '2024-01-15', amount: 45000, status: 'Unpaid' },
-  { id: '3', name: 'Alice Johnson', batch: '2024A', feesMonth: '2024-02-15', amount: 45000, status: 'Paid' },
-  { id: '10', name: 'Peter Parker', batch: '2024A', feesMonth: '2024-03-15', amount: 45000, status: 'Unpaid' },
-  { id: '4', name: 'Mike Johnson', batch: '2024B', feesMonth: '2024-02-15', amount: 52000, status: 'Paid' },
-  { id: '5', name: 'Sarah Williams', batch: '2024B', feesMonth: '2024-01-15', amount: 52000, status: 'Unpaid' },
-  { id: '6', name: 'Tom Wilson', batch: '2024B', feesMonth: '2024-03-15', amount: 52000, status: 'Unpaid' },
-  { id: '11', name: 'Mary Jane', batch: '2024B', feesMonth: '2024-02-15', amount: 52000, status: 'Paid' },
-  { id: '7', name: 'Robert Brown', batch: '2024C', feesMonth: '2024-03-15', amount: 48000, status: 'Unpaid' },
-  { id: '8', name: 'Emily Davis', batch: '2024C', feesMonth: '2024-02-15', amount: 48000, status: 'Paid' },
-  { id: '9', name: 'James Miller', batch: '2024C', feesMonth: '2024-01-15', amount: 48000, status: 'Paid' },
-  { id: '12', name: 'David Clark', batch: '2024C', feesMonth: '2024-03-15', amount: 48000, status: 'Unpaid' },
-  { id: '13', name: 'Lisa Anderson', batch: '2024D', feesMonth: '2024-02-15', amount: 50000, status: 'Paid' },
-  { id: '14', name: 'Kevin White', batch: '2024D', feesMonth: '2024-03-15', amount: 50000, status: 'Unpaid' },
-  { id: '15', name: 'Susan Brown', batch: '2024D', feesMonth: '2024-01-15', amount: 50000, status: 'Paid' }
+  // April 2025 Students
+  { id: '1-apr', name: 'John Doe', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
+  { id: '2-apr', name: 'Jane Smith', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
+  { id: '3-apr', name: 'Alice Johnson', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
+  { id: '10-apr', name: 'Peter Parker', batch: 'Freestyle-Senior', feesMonth: '2025-04-15', amount: 45000, status: 'Unpaid' },
+  { id: '4-apr', name: 'Mike Johnson', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Unpaid' },
+  { id: '5-apr', name: 'Sarah Williams', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Unpaid' },
+  { id: '6-apr', name: 'Tom Wilson', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Unpaid' },
+  { id: '11-apr', name: 'Mary Jane', batch: 'Freestyle-Advanced', feesMonth: '2025-04-15', amount: 52000, status: 'Paid' },
+  { id: '7-apr', name: 'Robert Brown', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Unpaid' },
+  { id: '8-apr', name: 'Emily Davis', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Unpaid' },
+  { id: '9-apr', name: 'James Miller', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Paid' },
+  { id: '12-apr', name: 'David Clark', batch: 'Hip-Hop-Basic', feesMonth: '2025-04-15', amount: 48000, status: 'Unpaid' },
+  { id: '13-apr', name: 'Lisa Anderson', batch: 'Freestyle-Toddler', feesMonth: '2025-04-15', amount: 50000, status: 'Unpaid' },
+  { id: '14-apr', name: 'Kevin White', batch: 'Freestyle-Toddler', feesMonth: '2025-04-15', amount: 50000, status: 'Unpaid' },
+  { id: '15-apr', name: 'Susan Brown', batch: 'Freestyle-Toddler', feesMonth: '2025-04-15', amount: 50000, status: 'Paid' },
+  
+  // March 2025 Students
+  { id: '1-mar', name: 'John Doe', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Paid' },
+  { id: '2-mar', name: 'Jane Smith', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Paid' },
+  { id: '3-mar', name: 'Alice Johnson', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Paid' },
+  { id: '10-mar', name: 'Peter Parker', batch: 'Freestyle-Senior', feesMonth: '2025-03-15', amount: 45000, status: 'Unpaid' },
+  { id: '4-mar', name: 'Mike Johnson', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Paid' },
+  { id: '5-mar', name: 'Sarah Williams', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Paid' },
+  { id: '6-mar', name: 'Tom Wilson', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Unpaid' },
+  { id: '11-mar', name: 'Mary Jane', batch: 'Freestyle-Advanced', feesMonth: '2025-03-15', amount: 52000, status: 'Paid' },
+  { id: '7-mar', name: 'Robert Brown', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Paid' },
+  { id: '8-mar', name: 'Emily Davis', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Paid' },
+  { id: '9-mar', name: 'James Miller', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Paid' },
+  { id: '12-mar', name: 'David Clark', batch: 'Hip-Hop-Basic', feesMonth: '2025-03-15', amount: 48000, status: 'Unpaid' },
+  { id: '13-mar', name: 'Lisa Anderson', batch: 'Freestyle-Toddler', feesMonth: '2025-03-15', amount: 50000, status: 'Paid' },
+  { id: '14-mar', name: 'Kevin White', batch: 'Freestyle-Toddler', feesMonth: '2025-03-15', amount: 50000, status: 'Paid' },
+  { id: '15-mar', name: 'Susan Brown', batch: 'Freestyle-Toddler', feesMonth: '2025-03-15', amount: 50000, status: 'Paid' },
+  
+  // February 2025 Students
+  { id: '1-feb', name: 'John Doe', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
+  { id: '2-feb', name: 'Jane Smith', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
+  { id: '3-feb', name: 'Alice Johnson', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
+  { id: '10-feb', name: 'Peter Parker', batch: 'Freestyle-Senior', feesMonth: '2025-02-15', amount: 45000, status: 'Paid' },
+  { id: '4-feb', name: 'Mike Johnson', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
+  { id: '5-feb', name: 'Sarah Williams', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
+  { id: '6-feb', name: 'Tom Wilson', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
+  { id: '11-feb', name: 'Mary Jane', batch: 'Freestyle-Advanced', feesMonth: '2025-02-15', amount: 52000, status: 'Paid' },
+  { id: '7-feb', name: 'Robert Brown', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
+  { id: '8-feb', name: 'Emily Davis', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
+  { id: '9-feb', name: 'James Miller', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
+  { id: '12-feb', name: 'David Clark', batch: 'Hip-Hop-Basic', feesMonth: '2025-02-15', amount: 48000, status: 'Paid' },
+  { id: '13-feb', name: 'Lisa Anderson', batch: 'Freestyle-Toddler', feesMonth: '2025-02-15', amount: 50000, status: 'Paid' },
+  { id: '14-feb', name: 'Kevin White', batch: 'Freestyle-Toddler', feesMonth: '2025-02-15', amount: 50000, status: 'Paid' },
+  { id: '15-feb', name: 'Susan Brown', batch: 'Freestyle-Toddler', feesMonth: '2025-02-15', amount: 50000, status: 'Paid' }
 ];
 
 const formatCurrency = (amount) => {
@@ -272,9 +307,9 @@ const AddStudentDialog = React.memo(({
     const value = event.target.value;
     setNewBatchName(value);
     
-    // Validate batch name format
-    if (value && !/^\d{4}[A-Z]$/.test(value)) {
-      setBatchError('Batch should be in format: YYYYX (e.g., 2024A)');
+    // Update batch name validation
+    if (value && !/^[A-Za-z]+-[A-Za-z]+(-[A-Za-z]+)?$/.test(value)) {
+      setBatchError('Batch should be in format: Style-Level (e.g., Freestyle-Senior)');
     } else {
       setBatchError('');
       onInputChange({ target: { name: 'batch', value } });
@@ -342,7 +377,7 @@ const AddStudentDialog = React.memo(({
               onChange={handleNewBatchChange}
               required
               error={Boolean(batchError)}
-              helperText={batchError || "Enter batch in format: YYYYX (e.g., 2024A)"}
+              helperText={batchError || "Enter batch in format: Style-Level (e.g., Freestyle-Senior)"}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -1281,6 +1316,32 @@ const DetailedView = React.memo(({
     message: '',
     severity: 'success'
   });
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [showAllMonths, setShowAllMonths] = useState(true);
+
+  // Get unique months from the last 3 months
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    const today = new Date();
+    
+    // Add last 3 months
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      months.add(format(date, 'yyyy-MM'));
+    }
+    
+    return Array.from(months).sort().reverse();
+  }, []);
+
+  // Filter students by selected month if not showing all months
+  const displayedStudents = useMemo(() => {
+    if (showAllMonths) {
+      return filteredStudents;
+    }
+    return filteredStudents.filter(student => 
+      format(parseISO(student.feesMonth), 'yyyy-MM') === selectedMonth
+    );
+  }, [filteredStudents, selectedMonth, showAllMonths]);
 
   const handleExportClick = (event) => {
     setExportAnchorEl(event.currentTarget);
@@ -1382,22 +1443,7 @@ const DetailedView = React.memo(({
         head: [['Batch', 'Total Students', 'Collected', 'Pending', 'Collection Rate']],
         body: batchData,
         theme: 'grid',
-        headStyles: { 
-          fillColor: [25, 118, 210],
-          fontSize: 10,
-          halign: 'center'
-        },
-        styles: {
-          fontSize: 9,
-          cellPadding: 3
-        },
-        columnStyles: {
-          0: { halign: 'left' },
-          1: { halign: 'center' },
-          2: { halign: 'right' },
-          3: { halign: 'right' },
-          4: { halign: 'center' }
-        }
+        headStyles: { fillColor: [25, 118, 210] }
       });
 
       // Add student details
@@ -1417,22 +1463,7 @@ const DetailedView = React.memo(({
         head: [['Name', 'Batch', 'Month', 'Amount', 'Status']],
         body: studentData,
         theme: 'grid',
-        headStyles: { 
-          fillColor: [25, 118, 210],
-          fontSize: 10,
-          halign: 'center'
-        },
-        styles: {
-          fontSize: 9,
-          cellPadding: 3
-        },
-        columnStyles: {
-          0: { halign: 'left' },
-          1: { halign: 'center' },
-          2: { halign: 'center' },
-          3: { halign: 'right' },
-          4: { halign: 'center' }
-        }
+        headStyles: { fillColor: [25, 118, 210] }
       });
 
       // Save the PDF
@@ -1455,7 +1486,7 @@ const DetailedView = React.memo(({
   return (
     <>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
           <TextField
             fullWidth
             variant="outlined"
@@ -1482,7 +1513,7 @@ const DetailedView = React.memo(({
               <MenuItem value="all">All Batches</MenuItem>
               {uniqueBatches.map((batch) => (
                 <MenuItem key={batch} value={batch}>
-                  Batch {batch}
+                  {batch}
                 </MenuItem>
               ))}
             </Select>
@@ -1499,6 +1530,31 @@ const DetailedView = React.memo(({
               <MenuItem value="all">All Status</MenuItem>
               <MenuItem value="Paid">Paid</MenuItem>
               <MenuItem value="Unpaid">Unpaid</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6} md={2}>
+          <FormControl fullWidth>
+            <InputLabel>Month</InputLabel>
+            <Select
+              value={showAllMonths ? 'all' : selectedMonth}
+              label="Month"
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'all') {
+                  setShowAllMonths(true);
+                } else {
+                  setShowAllMonths(false);
+                  setSelectedMonth(value);
+                }
+              }}
+            >
+              <MenuItem value="all">All Months</MenuItem>
+              {availableMonths.map((month) => (
+                <MenuItem key={month} value={month}>
+                  {format(parseISO(`${month}-01`), 'MMMM yyyy')}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Grid>
@@ -1582,7 +1638,7 @@ const DetailedView = React.memo(({
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredStudents.map((student) => (
+            {displayedStudents.map((student) => (
               <TableRow
                 key={student.id}
                 sx={getRowStyle(student.status, student.feesMonth)}
@@ -1635,7 +1691,7 @@ const DetailedView = React.memo(({
                 </TableCell>
               </TableRow>
             ))}
-            {filteredStudents.length === 0 && (
+            {displayedStudents.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">
@@ -1676,6 +1732,41 @@ const VisualizationsView = React.memo(({
   batchSummary, 
   selectedTimeRange 
 }) => {
+  // Get unique months from the last 3 months
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    const today = new Date();
+    
+    // Add last 3 months
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      months.add(format(date, 'yyyy-MM'));
+    }
+    
+    return Array.from(months).sort().reverse();
+  }, []);
+
+  // Group students by month for the summary
+  const monthlyStats = useMemo(() => {
+    const stats = {};
+    availableMonths.forEach(month => {
+      const monthStudents = students.filter(student => 
+        format(parseISO(student.feesMonth), 'yyyy-MM') === month
+      );
+      
+      stats[month] = {
+        total: monthStudents.length,
+        paid: monthStudents.filter(s => s.status === 'Paid').length,
+        unpaid: monthStudents.filter(s => s.status === 'Unpaid').length,
+        amount: monthStudents.reduce((sum, s) => sum + s.amount, 0),
+        collectedAmount: monthStudents
+          .filter(s => s.status === 'Paid')
+          .reduce((sum, s) => sum + s.amount, 0)
+      };
+    });
+    return stats;
+  }, [students, availableMonths]);
+
   const currentMetrics = {
     totalStudents: filteredStudents.length,
     totalFees: filteredStudents.reduce((sum, student) => sum + student.amount, 0),
@@ -1755,14 +1846,62 @@ const VisualizationsView = React.memo(({
         </Grid>
       </Grid>
 
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {batchSummary.map((batch) => (
-          <Grid item xs={12} sm={6} md={3} key={batch.batch}>
-            <BatchSummaryCard batchData={batch} />
-          </Grid>
-        ))}
+      {/* Monthly Analytics Cards */}
+      <Typography variant="h6" gutterBottom sx={{ mt: 4, mb: 2 }}>
+        Monthly Analytics
+      </Typography>
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        {availableMonths.map(month => {
+          const stats = monthlyStats[month];
+          return (
+            <Grid item xs={12} md={4} key={month}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {format(parseISO(`${month}-01`), 'MMMM yyyy')}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Students: {stats.total}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Paid: {stats.paid}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Unpaid: {stats.unpaid}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Amount: {formatCurrency(stats.amount)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Collected: {formatCurrency(stats.collectedAmount)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Pending: {formatCurrency(stats.amount - stats.collectedAmount)}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  <Box sx={{ mt: 2 }}>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={stats.total ? (stats.paid / stats.total) * 100 : 0}
+                      sx={{ height: 8, borderRadius: 5 }}
+                    />
+                    <Typography variant="body2" color="text.secondary" align="right" sx={{ mt: 1 }}>
+                      Collection Rate: {stats.total ? Math.round((stats.paid / stats.total) * 100) : 0}%
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          );
+        })}
       </Grid>
 
+      {/* Existing visualization components */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
           <Card sx={{ mb: 3 }}>
@@ -1826,37 +1965,6 @@ const VisualizationsView = React.memo(({
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12}>
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Monthly Student Payment Status</Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <RechartsTooltip
-                    formatter={(value) => value}
-                    labelFormatter={(date) => date}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="paidStudents"
-                    stroke="#4caf50"
-                    name="Paid Students"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="totalStudents"
-                    stroke="#2196f3"
-                    name="Total Students"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </Grid>
       </Grid>
     </>
   );
@@ -1867,17 +1975,16 @@ const FeesDashboard = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
-  // State declarations
+  // Remove openReminder state
   const [students, setStudents] = useState(dummyStudents);
-  const [openReminder, setOpenReminder] = useState(false);
   const [overdueStudents, setOverdueStudents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [filteredStudents, setFilteredStudents] = useState([]);
-  const [orderBy, setOrderBy] = useState('name');
-  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('feesMonth');
+  const [order, setOrder] = useState('desc');
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState('3');
   const [selectedTab, setSelectedTab] = useState(0);
@@ -1918,15 +2025,12 @@ const FeesDashboard = () => {
   const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000; // 30 minutes
   const SESSION_WARNING_TIME = 5 * 60 * 1000; // 5 minutes warning
 
-  // Initialize students and check for overdue
+  // Remove or modify the useEffect that sets up the reminder
   useEffect(() => {
     const overdue = students.filter(student => 
       student.status === 'Unpaid' && isPast(parseISO(student.feesMonth))
     );
     setOverdueStudents(overdue);
-    if (overdue.length > 0) {
-      setOpenReminder(true);
-    }
   }, [students]);
 
   // Filter and sort students
@@ -1957,26 +2061,31 @@ const FeesDashboard = () => {
     
     filtered.sort((a, b) => {
       let compareResult = 0;
-      switch (orderBy) {
-        case 'name':
-          compareResult = a.name.localeCompare(b.name);
-          break;
-        case 'batch':
-          compareResult = a.batch.localeCompare(b.batch);
-          break;
-        case 'feesMonth':
-          compareResult = isAfter(parseISO(a.feesMonth), parseISO(b.feesMonth)) ? 1 : -1;
-          break;
-        case 'amount':
-          compareResult = a.amount - b.amount;
-          break;
-        case 'status':
-          compareResult = a.status.localeCompare(b.status);
-          break;
-        default:
-          compareResult = 0;
+      
+      if (orderBy === 'feesMonth') {
+        // For dates, we want the most recent dates first by default
+        compareResult = isAfter(parseISO(a.feesMonth), parseISO(b.feesMonth)) ? -1 : 1;
+      } else {
+        // For other fields, first sort by date (most recent first)
+        const dateCompare = isAfter(parseISO(a.feesMonth), parseISO(b.feesMonth)) ? -1 : 1;
+        
+        // Then apply the selected sort
+        let fieldCompare = 0;
+        if (orderBy === 'name') {
+          fieldCompare = a.name.localeCompare(b.name);
+        } else if (orderBy === 'batch') {
+          fieldCompare = a.batch.localeCompare(b.batch);
+        } else if (orderBy === 'amount') {
+          fieldCompare = a.amount - b.amount;
+        } else if (orderBy === 'status') {
+          fieldCompare = a.status.localeCompare(b.status);
+        }
+        
+        // Use the field comparison first, then date as secondary sort
+        compareResult = fieldCompare || dateCompare;
       }
-      return order === 'asc' ? compareResult : -compareResult;
+      
+      return order === 'desc' ? compareResult : -compareResult;
     });
     
     setFilteredStudents(filtered);
@@ -2039,13 +2148,13 @@ const FeesDashboard = () => {
 
   // Handlers for student management
   const handleAddStudent = () => {
-    const newId = (Math.max(...students.map(s => parseInt(s.id, 10))) + 1).toString();
+    const newId = `${Date.now()}`; // Use timestamp for unique ID
     const formattedStudent = {
       ...newStudent,
       id: newId,
       amount: parseFloat(newStudent.amount)
     };
-    setStudents(prev => [...prev, formattedStudent]);
+    setStudents(prev => [formattedStudent, ...prev]); // Add new student at the beginning of the array
     setOpenAddDialog(false);
     setNewStudent({
       name: '',
@@ -2400,40 +2509,6 @@ const FeesDashboard = () => {
         <Toolbar />
         {mainContent()}
       </Box>
-
-      <Dialog 
-        open={openReminder} 
-        onClose={() => setOpenReminder(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            minWidth: 300
-          }
-        }}
-      >
-        <DialogTitle sx={{ bgcolor: '#ffebee', color: '#d32f2f' }}>
-          Fees Payment Reminder
-        </DialogTitle>
-        <DialogContent>
-          <Typography sx={{ mt: 2, mb: 2 }}>
-            The following students have overdue fees:
-          </Typography>
-          <Box component="ul" sx={{ pl: 2 }}>
-            {overdueStudents.map((student) => (
-              <li key={student.id}>
-                <Typography color="error">
-                  {student.name} - {format(parseISO(student.feesMonth), 'MMMM yyyy')}
-                </Typography>
-              </li>
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenReminder(false)} variant="contained" color="primary">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       <AddStudentDialog
         open={openAddDialog}
