@@ -271,6 +271,11 @@ const AddStudentDialog = React.memo(({
     onClose();
   };
 
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onAdd();
+  };
+
   return (
     <Dialog 
       open={open} 
@@ -278,127 +283,129 @@ const AddStudentDialog = React.memo(({
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle>Add New Student</DialogTitle>
-      <DialogContent>
-        <DialogContentText sx={{ mb: 2 }}>
-          Please fill in the student details below
-        </DialogContentText>
-        <Stack spacing={2} sx={{ mt: 2 }}>
-          <TextField
-            autoFocus
-            name="name"
-            label="Student Name"
-            type="text"
-            fullWidth
-            value={newStudent.name}
-            onChange={onInputChange}
-            required
-          />
-          
-          {!isNewBatch ? (
-            <FormControl fullWidth>
-              <InputLabel>Batch</InputLabel>
-              <Select
-                name="batch"
-                value={newStudent.batch}
-                onChange={handleBatchChange}
-                required
-              >
-                {uniqueBatches.map((batch) => (
-                  <MenuItem key={batch} value={batch}>
-                    Batch {batch}
-                  </MenuItem>
-                ))}
-                <MenuItem value="new" sx={{ color: 'primary.main' }}>
-                  <AddIcon sx={{ mr: 1 }} />
-                  Add New Batch
-                </MenuItem>
-              </Select>
-            </FormControl>
-          ) : (
+      <form onSubmit={handleSubmit}>
+        <DialogTitle>Add New Student</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Please fill in the student details below
+          </DialogContentText>
+          <Stack spacing={2} sx={{ mt: 2 }}>
             <TextField
-              name="newBatch"
-              label="New Batch"
+              autoFocus
+              name="name"
+              label="Student Name"
               type="text"
               fullWidth
-              value={newBatchName}
-              onChange={handleNewBatchChange}
+              value={newStudent.name}
+              onChange={onInputChange}
               required
-              error={Boolean(batchError)}
-              helperText={batchError || "Enter batch in format: Style-Level (e.g., Freestyle-Senior)"}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton 
-                      onClick={() => {
-                        setIsNewBatch(false);
-                        setNewBatchName('');
-                        setBatchError('');
-                        onInputChange({ target: { name: 'batch', value: '' } });
-                      }}
-                      edge="end"
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
             />
-          )}
+            
+            {!isNewBatch ? (
+              <FormControl fullWidth required>
+                <InputLabel>Batch</InputLabel>
+                <Select
+                  name="batch"
+                  value={newStudent.batch}
+                  onChange={handleBatchChange}
+                  label="Batch"
+                >
+                  {uniqueBatches.map((batch) => (
+                    <MenuItem key={batch} value={batch}>
+                      {batch}
+                    </MenuItem>
+                  ))}
+                  <MenuItem value="new" sx={{ color: 'primary.main' }}>
+                    <AddIcon sx={{ mr: 1 }} />
+                    Add New Batch
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            ) : (
+              <TextField
+                name="newBatch"
+                label="New Batch"
+                type="text"
+                fullWidth
+                value={newBatchName}
+                onChange={handleNewBatchChange}
+                required
+                error={Boolean(batchError)}
+                helperText={batchError || "Enter batch in format: Style-Level (e.g., Freestyle-Senior)"}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton 
+                        onClick={() => {
+                          setIsNewBatch(false);
+                          setNewBatchName('');
+                          setBatchError('');
+                          onInputChange({ target: { name: 'batch', value: '' } });
+                        }}
+                        edge="end"
+                      >
+                        <CloseIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
 
-          <TextField
-            name="feesMonth"
-            label="Fees Month"
-            type="date"
-            fullWidth
-            value={newStudent.feesMonth}
-            onChange={onInputChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            required
-          />
-          <TextField
-            name="amount"
-            label="Fees Amount"
-            type="number"
-            fullWidth
-            value={newStudent.amount}
-            onChange={onInputChange}
-            InputProps={{
-              startAdornment: <InputAdornment position="start">₹</InputAdornment>,
-            }}
-            required
-          />
-          <TextField
-            select
-            name="status"
-            label="Payment Status"
-            fullWidth
-            value={newStudent.status}
-            onChange={onInputChange}
-            required
+            <TextField
+              name="feesMonth"
+              label="Fees Month"
+              type="date"
+              fullWidth
+              value={newStudent.feesMonth}
+              onChange={onInputChange}
+              InputLabelProps={{
+                shrink: true,
+              }}
+              required
+            />
+            <TextField
+              name="amount"
+              label="Fees Amount"
+              type="number"
+              fullWidth
+              value={newStudent.amount}
+              onChange={onInputChange}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+              }}
+              required
+            />
+            <TextField
+              select
+              name="status"
+              label="Payment Status"
+              fullWidth
+              value={newStudent.status}
+              onChange={onInputChange}
+              required
+            >
+              <MenuItem value="Paid">Paid</MenuItem>
+              <MenuItem value="Unpaid">Unpaid</MenuItem>
+            </TextField>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+          <Button 
+            type="submit"
+            variant="contained"
+            disabled={
+              !newStudent.name || 
+              !newStudent.batch || 
+              !newStudent.amount ||
+              (isNewBatch && Boolean(batchError))
+            }
           >
-            <MenuItem value="Paid">Paid</MenuItem>
-            <MenuItem value="Unpaid">Unpaid</MenuItem>
-          </TextField>
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
-        <Button 
-          onClick={onAdd}
-          variant="contained"
-          disabled={
-            !newStudent.name || 
-            !newStudent.batch || 
-            !newStudent.amount ||
-            (isNewBatch && Boolean(batchError))
-          }
-        >
-          Add Student
-        </Button>
-      </DialogActions>
+            Add Student
+          </Button>
+        </DialogActions>
+      </form>
     </Dialog>
   );
 });
@@ -1266,6 +1273,8 @@ const DetailedView = React.memo(({
   });
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [showAllMonths, setShowAllMonths] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState(null);
 
   // Get unique months from the last 3 months
   const availableMonths = useMemo(() => {
@@ -1429,6 +1438,24 @@ const DetailedView = React.memo(({
         severity: 'error'
       });
     }
+  };
+
+  const handleDeleteClick = (student) => {
+    setStudentToDelete(student);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (studentToDelete) {
+      handleDeleteStudent(studentToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setStudentToDelete(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setStudentToDelete(null);
   };
 
   return (
@@ -1630,7 +1657,7 @@ const DetailedView = React.memo(({
                       <IconButton 
                         size="small" 
                         color="error"
-                        onClick={() => handleDeleteStudent(student)}
+                        onClick={() => handleDeleteClick(student)}
                       >
                         <DeleteIcon />
                       </IconButton>
@@ -1670,6 +1697,50 @@ const DetailedView = React.memo(({
           Export to PDF
         </MenuItem>
       </Menu>
+
+      {/* Add Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title" sx={{ color: 'error.main' }}>
+          Confirm Delete
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete {studentToDelete?.name}'s record? This action cannot be undone.
+          </DialogContentText>
+          {studentToDelete && (
+            <Box sx={{ mt: 2, bgcolor: 'grey.100', p: 2, borderRadius: 1 }}>
+              <Typography variant="body2" gutterBottom>
+                <strong>Student Name:</strong> {studentToDelete.name}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Batch:</strong> {studentToDelete.batch}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Month:</strong> {format(parseISO(studentToDelete.feesMonth), 'MMMM yyyy')}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Status:</strong> {studentToDelete.status}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel}>Cancel</Button>
+          <Button 
+            onClick={handleDeleteConfirm} 
+            color="error" 
+            variant="contained"
+            startIcon={<DeleteIcon />}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 });
@@ -1702,33 +1773,44 @@ const VisualizationsView = React.memo(({
         format(parseISO(student.feesMonth), 'yyyy-MM') === month
       );
       
+      const totalAmount = monthStudents.reduce((sum, s) => sum + Number(s.amount), 0);
+      const collectedAmount = monthStudents
+        .filter(s => s.status === 'Paid')
+        .reduce((sum, s) => sum + Number(s.amount), 0);
+      
       stats[month] = {
         total: monthStudents.length,
         paid: monthStudents.filter(s => s.status === 'Paid').length,
         unpaid: monthStudents.filter(s => s.status === 'Unpaid').length,
-        amount: monthStudents.reduce((sum, s) => sum + s.amount, 0),
-        collectedAmount: monthStudents
-          .filter(s => s.status === 'Paid')
-          .reduce((sum, s) => sum + s.amount, 0)
+        amount: totalAmount,
+        collectedAmount: collectedAmount,
+        pendingAmount: totalAmount - collectedAmount
       };
     });
     return stats;
   }, [students, availableMonths]);
 
-  const currentMetrics = {
+  const currentMetrics = useMemo(() => ({
     totalStudents: filteredStudents.length,
-    totalFees: filteredStudents.reduce((sum, student) => sum + student.amount, 0),
+    totalFees: filteredStudents.reduce((sum, student) => sum + Number(student.amount), 0),
     overdueCount: filteredStudents.filter(student => 
       student.status === 'Unpaid' && isPast(parseISO(student.feesMonth))
     ).length,
     collectionRate: filteredStudents.length > 0 
       ? (filteredStudents.filter(s => s.status === 'Paid').length / filteredStudents.length) * 100 
       : 0
-  };
+  }), [filteredStudents]);
 
-  const getMonthlyTrends = () => {
+  const getMonthlyTrends = useCallback(() => {
     const monthlyData = {};
-    students.forEach(student => {
+    
+    // Sort students by month
+    const sortedStudents = [...students].sort((a, b) => 
+      parseISO(b.feesMonth) - parseISO(a.feesMonth)
+    );
+
+    // Group by month
+    sortedStudents.forEach(student => {
       const month = format(parseISO(student.feesMonth), 'MMMM yyyy');
       if (!monthlyData[month]) {
         monthlyData[month] = {
@@ -1740,22 +1822,26 @@ const VisualizationsView = React.memo(({
           paidStudents: 0
         };
       }
-      monthlyData[month].totalFees += student.amount;
+      
+      const amount = Number(student.amount);
+      monthlyData[month].totalFees += amount;
       monthlyData[month].totalStudents += 1;
+      
       if (student.status === 'Paid') {
-        monthlyData[month].collectedFees += student.amount;
+        monthlyData[month].collectedFees += amount;
         monthlyData[month].paidStudents += 1;
       } else {
-        monthlyData[month].pendingFees += student.amount;
+        monthlyData[month].pendingFees += amount;
       }
     });
 
-    return Object.values(monthlyData).sort((a, b) => 
-      parseISO(a.month) - parseISO(b.month)
-    ).slice(-parseInt(selectedTimeRange));
-  };
+    // Convert to array and sort by date (oldest to newest for x-axis left to right)
+    return Object.values(monthlyData)
+      .sort((a, b) => new Date(a.month) - new Date(b.month))
+      .slice(-parseInt(selectedTimeRange));
+  }, [students, selectedTimeRange]);
 
-  const monthlyTrends = getMonthlyTrends();
+  const monthlyTrends = useMemo(() => getMonthlyTrends(), [getMonthlyTrends]);
 
   return (
     <>
@@ -1801,6 +1887,8 @@ const VisualizationsView = React.memo(({
       <Grid container spacing={2} sx={{ mb: 4 }}>
         {availableMonths.map(month => {
           const stats = monthlyStats[month];
+          const collectionRate = stats.total ? (stats.paid / stats.total) * 100 : 0;
+          
           return (
             <Grid item xs={12} md={4} key={month}>
               <Card>
@@ -1828,18 +1916,18 @@ const VisualizationsView = React.memo(({
                         Collected: {formatCurrency(stats.collectedAmount)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Pending: {formatCurrency(stats.amount - stats.collectedAmount)}
+                        Pending: {formatCurrency(stats.pendingAmount)}
                       </Typography>
                     </Grid>
                   </Grid>
                   <Box sx={{ mt: 2 }}>
                     <LinearProgress 
                       variant="determinate" 
-                      value={stats.total ? (stats.paid / stats.total) * 100 : 0}
+                      value={collectionRate}
                       sx={{ height: 8, borderRadius: 5 }}
                     />
                     <Typography variant="body2" color="text.secondary" align="right" sx={{ mt: 1 }}>
-                      Collection Rate: {stats.total ? Math.round((stats.paid / stats.total) * 100) : 0}%
+                      Collection Rate: {Math.round(collectionRate)}%
                     </Typography>
                   </Box>
                 </CardContent>
@@ -1849,40 +1937,47 @@ const VisualizationsView = React.memo(({
         })}
       </Grid>
 
-      {/* Existing visualization components */}
+      {/* Charts */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>Monthly Collection Trends</Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={monthlyTrends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <RechartsTooltip
-                    formatter={(value) => formatCurrency(value)}
-                    labelFormatter={(date) => date}
-                  />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="collectedFees"
-                    stackId="1"
-                    stroke="#4caf50"
-                    fill="#4caf50"
-                    name="Collected"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="pendingFees"
-                    stackId="1"
-                    stroke="#ff9800"
-                    fill="#ff9800"
-                    name="Pending"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <Box sx={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <AreaChart data={monthlyTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="month" 
+                      tickFormatter={(value) => format(new Date(value), 'MMM yy')}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => `₹${value / 1000}K`}
+                    />
+                    <RechartsTooltip
+                      formatter={(value) => formatCurrency(value)}
+                      labelFormatter={(label) => format(new Date(label), 'MMMM yyyy')}
+                    />
+                    <Legend />
+                    <Area
+                      type="monotone"
+                      dataKey="collectedFees"
+                      stackId="1"
+                      stroke="#4caf50"
+                      fill="#4caf50"
+                      name="Collected"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="pendingFees"
+                      stackId="1"
+                      stroke="#ff9800"
+                      fill="#ff9800"
+                      name="Pending"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -1890,26 +1985,28 @@ const VisualizationsView = React.memo(({
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>Collection Rate by Batch</Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={batchSummary}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" domain={[0, 100]} unit="%" />
-                  <YAxis dataKey="batch" type="category" />
-                  <RechartsTooltip
-                    formatter={(value) => `${value}%`}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey="collectionRate"
-                    fill="#2196f3"
-                    name="Collection Rate"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              <Box sx={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={batchSummary}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" domain={[0, 100]} unit="%" />
+                    <YAxis dataKey="batch" type="category" width={100} />
+                    <RechartsTooltip
+                      formatter={(value) => `${Math.round(value)}%`}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey="collectionRate"
+                      fill="#2196f3"
+                      name="Collection Rate"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -2116,22 +2213,72 @@ const FeesDashboard = () => {
   }, []);
 
   // Handlers for student management
-  const handleAddStudent = async (studentData) => {
+  const handleAddStudent = async () => {
     try {
-      await api.addStudent(studentData);
+      if (!newStudent.name || !newStudent.batch || !newStudent.feesMonth || !newStudent.amount) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Please fill in all required fields', 
+          severity: 'error' 
+        });
+        return;
+      }
+
+      // Generate a unique ID using timestamp and random string
+      const timestamp = new Date().getTime();
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const uniqueId = `${timestamp}-${randomStr}`;
+
+      // Create a new student object with the correct format
+      const studentData = {
+        id: uniqueId,
+        name: newStudent.name,
+        batch: newStudent.batch,
+        feesMonth: newStudent.feesMonth,
+        amount: parseFloat(newStudent.amount),
+        status: newStudent.status || 'Unpaid'
+      };
+
+      console.log('Adding new student:', studentData);
+      const addedStudent = await api.addStudent(studentData);
+      console.log('Student added successfully:', addedStudent);
+
       // Refresh students data
       const updatedStudents = await api.getStudents();
       setStudents(updatedStudents);
+      
+      // Reset form and close dialog
+      setNewStudent({
+        name: '',
+        batch: '',
+        feesMonth: format(new Date(), 'yyyy-MM-dd'),
+        amount: '',
+        status: 'Unpaid'
+      });
       setOpenAddDialog(false);
-      setSnackbar({ open: true, message: 'Student added successfully', severity: 'success' });
+      
+      setSnackbar({ 
+        open: true, 
+        message: 'Student added successfully', 
+        severity: 'success' 
+      });
     } catch (error) {
-      setSnackbar({ open: true, message: 'Failed to add student', severity: 'error' });
+      console.error('Error adding student:', error);
+      setSnackbar({ 
+        open: true, 
+        message: `Failed to add student: ${error.response?.data?.message || error.message}`, 
+        severity: 'error' 
+      });
     }
   };
 
-  const handleUpdateStudent = async (studentId, studentData) => {
+  const handleUpdateStudent = async () => {
     try {
-      await api.updateStudent(studentId, studentData);
+      if (!selectedStudent) {
+        setSnackbar({ open: true, message: 'No student selected for update', severity: 'error' });
+        return;
+      }
+      await api.updateStudent(selectedStudent.id, editStudent);
       // Refresh students data
       const updatedStudents = await api.getStudents();
       setStudents(updatedStudents);
@@ -2175,9 +2322,9 @@ const FeesDashboard = () => {
     }
   };
 
-  const handleDeleteStudent = async (studentId) => {
+  const handleDeleteStudent = async (student) => {
     try {
-      await api.deleteStudent(studentId);
+      await api.deleteStudent(student.id);
       // Refresh students data
       const updatedStudents = await api.getStudents();
       setStudents(updatedStudents);
