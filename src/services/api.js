@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-
-const API_URL = process.env.BACKEND_HOST || 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_BACKEND_HOST || 'http://localhost:5000/api';
 
 const api = {
   // Get all students
