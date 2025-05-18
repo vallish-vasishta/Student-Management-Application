@@ -18,9 +18,33 @@ const Login = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'password') {
+    
+    // Define valid credentials for both roles
+    const validCredentials = {
+      admin: { username: 'admin', password: 'password' },
+      trainer: { username: 'trainer', password: 'trainer123' }
+    };
+
+    // Determine role based on credentials
+    let role = null;
+    if (username === validCredentials.admin.username && password === validCredentials.admin.password) {
+      role = 'admin';
+    } else if (username === validCredentials.trainer.username && password === validCredentials.trainer.password) {
+      role = 'trainer';
+    }
+    
+    if (role) {
+      // Store both authentication and role information
       localStorage.setItem('isAuthenticated', 'true');
-      navigate('/dashboard');
+      localStorage.setItem('userRole', role);
+      localStorage.setItem('userName', role === 'admin' ? 'Admin User' : 'Trainer User');
+      
+      // Navigate with tab parameter for trainer
+      if (role === 'trainer') {
+        navigate('/dashboard?tab=attendance');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       setError('Invalid credentials');
     }
@@ -38,7 +62,7 @@ const Login = () => {
       >
         <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
           <Typography component="h1" variant="h5" align="center">
-            Admin Login
+            Login
           </Typography>
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>

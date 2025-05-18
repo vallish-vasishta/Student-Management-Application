@@ -59,6 +59,42 @@ const api = {
       console.error('Error marking student as paid:', error);
       throw error;
     }
+  },
+
+  // Get attendance records for a specific date and batch
+  getAttendance: async (date, batch) => {
+    try {
+      console.log('Fetching attendance for:', { date, batch });
+      const response = await axios.get(`${API_URL}/attendance`, {
+        params: { date, batch }
+      });
+      console.log('Attendance response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      throw error;
+    }
+  },
+
+  // Mark attendance for students
+  markAttendance: async (date, records) => {
+    try {
+      console.log('Marking attendance with:', { date, records });
+      const response = await axios.post(`${API_URL}/attendance`, {
+        date,
+        records
+      });
+      console.log('Mark attendance response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      throw error;
+    }
   }
 };
 

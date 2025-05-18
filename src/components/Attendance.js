@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -22,35 +22,31 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import * as api from '../services/api';
+import api from '../services/api';
 
 const Attendance = () => {
+  console.log('Rendering Attendance component');
+  
   const [students, setStudents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedBatch, setSelectedBatch] = useState('');
   const [attendance, setAttendance] = useState([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  useEffect(() => {
-    if (selectedBatch && selectedDate) {
-      fetchAttendance();
-    }
-  }, [selectedBatch, selectedDate]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       const data = await api.getStudents();
       setStudents(data);
     } catch (error) {
-      showSnackbar('Failed to fetch students', 'error');
+      showSnackbar('Failed to fetch students: ' + (error.response?.data?.error || error.message), 'error');
     }
-  };
+  }, []);
 
-  const fetchAttendance = async () => {
+  const fetchAttendance = useCallback(async () => {
+    if (!selectedBatch || !selectedDate) return;
+    
+    setIsLoading(true);
     try {
       const data = await api.getAttendance(
         selectedDate.format('YYYY-MM-DD'),
@@ -58,11 +54,19 @@ const Attendance = () => {
       );
       setAttendance(data);
     } catch (error) {
-      showSnackbar('Failed to fetch attendance', 'error');
+      showSnackbar('Failed to fetch attendance: ' + (error.response?.data?.error || error.message), 'error');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [selectedBatch, selectedDate]);
 
-  const handleMarkAttendance = async (studentId, status) => {
+  const handleMarkAttendance = useCallback(async (studentId, status) => {
+    if (!studentId || !status || !selectedBatch || !selectedDate) {
+      showSnackbar('Missing required data for marking attendance', 'error');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const records = [{
         studentId,
@@ -72,33 +76,45 @@ const Attendance = () => {
 
       await api.markAttendance(selectedDate.format('YYYY-MM-DD'), records);
       showSnackbar('Attendance marked successfully', 'success');
-      fetchAttendance();
+      await fetchAttendance();
     } catch (error) {
-      showSnackbar('Failed to mark attendance', 'error');
+      showSnackbar('Failed to mark attendance: ' + (error.response?.data?.error || error.message), 'error');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [selectedBatch, selectedDate, fetchAttendance]);
 
-  const showSnackbar = (message, severity) => {
+  const showSnackbar = useCallback((message, severity) => {
     setSnackbar({ open: true, message, severity });
-  };
+  }, []);
 
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
+  const handleCloseSnackbar = useCallback(() => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  }, []);
 
-  const getBatches = () => {
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  useEffect(() => {
+    if (selectedBatch && selectedDate) {
+      fetchAttendance();
+    }
+  }, [selectedBatch, selectedDate, fetchAttendance]);
+
+  const getBatches = useCallback(() => {
     const batches = [...new Set(students.map(student => student.batch))];
     return batches.sort();
-  };
+  }, [students]);
 
-  const getStudentsByBatch = () => {
+  const getStudentsByBatch = useCallback(() => {
     return students.filter(student => student.batch === selectedBatch);
-  };
+  }, [students, selectedBatch]);
 
-  const getAttendanceStatus = (studentId) => {
+  const getAttendanceStatus = useCallback((studentId) => {
     const record = attendance.find(a => a.studentId === studentId);
     return record ? record.status : 'absent';
-  };
+  }, [attendance]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -113,6 +129,7 @@ const Attendance = () => {
             value={selectedBatch}
             label="Batch"
             onChange={(e) => setSelectedBatch(e.target.value)}
+            disabled={isLoading}
           >
             {getBatches().map((batch) => (
               <MenuItem key={batch} value={batch}>
@@ -127,7 +144,7 @@ const Attendance = () => {
             label="Date"
             value={selectedDate}
             onChange={(newValue) => setSelectedDate(newValue)}
-            renderInput={(params) => <TextField {...params} />}
+            renderInput={(params) => <TextField {...params} disabled={isLoading} />}
           />
         </LocalizationProvider>
       </Box>
@@ -156,6 +173,7 @@ const Attendance = () => {
                       variant="contained"
                       color="primary"
                       onClick={() => handleMarkAttendance(student.id, 'present')}
+                      disabled={isLoading}
                       sx={{ mr: 1 }}
                     >
                       Present
@@ -164,6 +182,7 @@ const Attendance = () => {
                       variant="contained"
                       color="error"
                       onClick={() => handleMarkAttendance(student.id, 'absent')}
+                      disabled={isLoading}
                     >
                       Absent
                     </Button>

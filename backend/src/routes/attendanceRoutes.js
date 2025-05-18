@@ -1,10 +1,10 @@
 const express = require('express');
-const router = express.Router();
+const router2 = express.Router();
 const { Attendance, Student } = require('../models');
 const { Op } = require('sequelize');
 
 // Get attendance for a specific date and batch
-router.get('/', async (req, res) => {
+router2.get('/', async (req, res) => {
   try {
     const { date, batch } = req.query;
     const where = {};
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get attendance history for a date range
-router.get('/history', async (req, res) => {
+router2.get('/history', async (req, res) => {
   try {
     const { startDate, endDate, batch } = req.query;
     const where = {};
@@ -67,7 +67,7 @@ router.get('/history', async (req, res) => {
 });
 
 // Mark attendance for students
-router.post('/', async (req, res) => {
+router2.post('/', async (req, res) => {
   try {
     console.log('Received attendance data:', req.body);
     const { date, records } = req.body;
@@ -152,7 +152,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update individual attendance
-router.put('/:id', async (req, res) => {
+router2.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -194,4 +194,4 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router2; 

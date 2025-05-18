@@ -58,7 +58,8 @@ import {
   Avatar,
   Popover,
   ListItemButton,
-  ListItemAvatar
+  ListItemAvatar,
+  CircularProgress
 } from '@mui/material';
 import {
   PaidOutlined,
@@ -506,10 +507,9 @@ const EditStudentDialog = React.memo(({
   </Dialog>
 ));
 
-const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary }) => {
+const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, attendanceData, setAttendanceData, isLoadingAttendance, setIsLoadingAttendance }) => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedBatch, setSelectedBatch] = useState('all');
-  const [attendanceData, setAttendanceData] = useState({});
   const [showingDate, setShowingDate] = useState(format(new Date(), 'MMMM dd, yyyy'));
   const [viewMode, setViewMode] = useState('daily');
   const [dateRange, setDateRange] = useState({
@@ -526,39 +526,118 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary }) =>
   });
   const [showLateAttendance, setShowLateAttendance] = useState(false);
 
-  useEffect(() => {
-    if (!attendanceData[selectedDate]) {
-      const initialAttendance = {};
-      students.forEach(student => {
-        initialAttendance[student.id] = 'absent';
+  // Add isLateAttendance check
+  const isLateAttendance = useMemo(() => {
+    const currentTime = new Date();
+    return currentTime.getHours() >= 12;
+  }, []);
+
+  // Add getBatches function
+  const getBatches = useCallback(() => {
+    return uniqueBatches;
+  }, [uniqueBatches]);
+
+  // Memoize fetchAttendance function
+  const fetchAttendance = useCallback(async (date, batch) => {
+    if (!date) return;
+    
+    setIsLoadingAttendance(true);
+    try {
+      console.log('Fetching attendance for:', { date, batch });
+      const data = await api.getAttendance(date, batch);
+      console.log('Fetched attendance data:', data);
+      
+      const attendanceMap = {};
+      data.forEach(record => {
+        attendanceMap[record.studentId] = record.status;
       });
+      
       setAttendanceData(prev => ({
         ...prev,
-        [selectedDate]: initialAttendance
+        [date]: attendanceMap
       }));
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to fetch attendance data',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoadingAttendance(false);
     }
-    setShowingDate(format(parseISO(selectedDate), 'MMMM dd, yyyy'));
-  }, [selectedDate, students]);
+  }, [setAttendanceData, setIsLoadingAttendance]);
 
-  const handleDateChange = (event) => {
-    setSelectedDate(event.target.value);
-  };
+  // Memoize handleAttendanceChange function
+  const handleAttendanceChange = useCallback(async (studentId, status) => {
+    console.log('handleAttendanceChange called with:', { studentId, status, selectedDate, selectedBatch });
+    
+    if (!selectedDate) {
+      console.log('Invalid selection:', { selectedDate });
+      return;
+    }
 
-  const handleBatchChange = (event) => {
-    setSelectedBatch(event.target.value);
-  };
+    setIsLoadingAttendance(true);
+    try {
+      const records = [{
+        studentId,
+        status,
+        batch: students.find(s => s.id === studentId)?.batch || selectedBatch
+      }];
 
-  const handleAttendanceChange = (studentId, status) => {
-    setAttendanceData(prev => ({
-      ...prev,
-      [selectedDate]: {
-        ...prev[selectedDate],
-        [studentId]: status
-      }
-    }));
-  };
+      console.log('Making API call to mark attendance with records:', records);
+      const response = await api.markAttendance(selectedDate, records);
+      console.log('API response:', response);
+      
+      // Update local state after successful API call
+      setAttendanceData(prev => ({
+        ...prev,
+        [selectedDate]: {
+          ...prev[selectedDate],
+          [studentId]: status
+        }
+      }));
+
+      setSnackbar({
+        open: true,
+        message: 'Attendance marked successfully',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to mark attendance',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoadingAttendance(false);
+    }
+  }, [selectedDate, selectedBatch, students, setAttendanceData, setIsLoadingAttendance]);
+
+  // Memoize handleDateChange function
+  const handleDateChange = useCallback((event) => {
+    const newDate = event.target.value;
+    setSelectedDate(newDate);
+    setShowingDate(format(parseISO(newDate), 'MMMM dd, yyyy'));
+  }, []);
+
+  // Memoize handleBatchChange function
+  const handleBatchChange = useCallback((event) => {
+    const newBatch = event.target.value;
+    setSelectedBatch(newBatch);
+  }, []);
+
+  // Fetch attendance data when date changes
+  useEffect(() => {
+    fetchAttendance(selectedDate, selectedBatch);
+  }, [selectedDate, selectedBatch, fetchAttendance]);
 
   const getAttendanceStats = (date = selectedDate, batch = selectedBatch) => {
+    if (!date) {
+      return { total: 0, present: 0, absent: 0, percentage: 0 };
+    }
+
     const currentDateAttendance = attendanceData[date] || {};
     const filteredStudents = students.filter(s => 
       batch === 'all' || s.batch === batch
@@ -708,21 +787,61 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary }) =>
     return history;
   };
 
-  const handleBulkAttendance = (status) => {
-    const updatedAttendance = { ...attendanceData[selectedDate] };
-    selectedStudents.forEach(studentId => {
-      updatedAttendance[studentId] = status;
-    });
-    setAttendanceData(prev => ({
-      ...prev,
-      [selectedDate]: updatedAttendance
-    }));
-    setSelectedStudents([]);
-    setSnackbar({
-      open: true,
-      message: `Marked ${selectedStudents.length} students as ${status}`,
-      severity: 'success'
-    });
+  const handleBulkAttendance = async (status) => {
+    if (!selectedDate) {
+      console.log('Invalid selection:', { selectedDate });
+      return;
+    }
+
+    if (selectedStudents.length === 0) {
+      setSnackbar({
+        open: true,
+        message: 'Please select at least one student',
+        severity: 'warning'
+      });
+      return;
+    }
+
+    setIsLoadingAttendance(true);
+    try {
+      const records = selectedStudents.map(studentId => {
+        const student = students.find(s => s.id === studentId);
+        return {
+          studentId,
+          status,
+          batch: student?.batch || selectedBatch
+        };
+      });
+
+      console.log('Making bulk API call to mark attendance with records:', records);
+      const response = await api.markAttendance(selectedDate, records);
+      console.log('Bulk API response:', response);
+      
+      // Update local state after successful API call
+      setAttendanceData(prev => ({
+        ...prev,
+        [selectedDate]: {
+          ...prev[selectedDate],
+          ...Object.fromEntries(selectedStudents.map(id => [id, status]))
+        }
+      }));
+
+      setSelectedStudents([]);
+      setSnackbar({
+        open: true,
+        message: `Marked ${selectedStudents.length} students as ${status}`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Error marking bulk attendance:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to mark attendance',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoadingAttendance(false);
+    }
   };
 
   const handleSelectStudent = (studentId) => {
@@ -751,285 +870,257 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary }) =>
     return Math.round((studentAttendance.length / history.length) * 100);
   };
 
-  const DailyView = () => {
-    const stats = getAttendanceStats();
-    const filteredStudents = students.filter(student => 
-      (selectedBatch === 'all' || student.batch === selectedBatch) &&
-      student.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const DailyView = () => (
+    <Box>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel>Batch</InputLabel>
+          <Select
+            value={selectedBatch}
+            label="Batch"
+            onChange={handleBatchChange}
+            disabled={isLoadingAttendance}
+          >
+            <MenuItem value="all">All Batches</MenuItem>
+            {getBatches().map((batch) => (
+              <MenuItem key={batch} value={batch}>
+                {batch}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-    const currentTime = new Date();
-    const isLateAttendance = currentTime.getHours() >= 12;
+        <TextField
+          type="date"
+          value={selectedDate}
+          onChange={handleDateChange}
+          disabled={isLoadingAttendance}
+          InputLabelProps={{ shrink: true }}
+        />
 
-    return (
-      <>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              type="date"
-              label="Select Date"
-              value={selectedDate}
-              onChange={handleDateChange}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControl fullWidth>
-              <InputLabel>Select Batch</InputLabel>
-              <Select
-                value={selectedBatch}
-                label="Select Batch"
-                onChange={handleBatchChange}
-              >
-                <MenuItem value="all">All Batches</MenuItem>
-                {uniqueBatches.map((batch) => (
-                  <MenuItem key={batch} value={batch}>
-                    Batch {batch}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              fullWidth
-              label="Search Students"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={showLateAttendance}
-                  onChange={(e) => setShowLateAttendance(e.target.checked)}
-                />
-              }
-              label="Show Late Attendance Alerts"
-            />
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <CalendarIcon sx={{ mr: 1 }} />
-                  <Typography variant="h6" component="div">
-                    {showingDate}
-                    {isLateAttendance && showLateAttendance && (
-                      <Chip
-                        size="small"
-                        color="warning"
-                        label="Late Attendance"
-                        sx={{ ml: 1 }}
-                      />
-                    )}
-                  </Typography>
-                </Box>
-                <Typography color="text.secondary">
-                  Selected Date
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <PersonIcon sx={{ mr: 1 }} />
-                  <Typography variant="h6" component="div">
-                    {stats.total}
-                  </Typography>
-                </Box>
-                <Typography color="text.secondary">
-                  Total Students
-                </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={stats.percentage}
-                  sx={{ mt: 1 }}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <PresentIcon sx={{ mr: 1, color: 'success.main' }} />
-                  <Typography variant="h6" component="div">
-                    {stats.present}
-                    <Typography component="span" variant="body2" sx={{ ml: 1 }}>
-                      ({Math.round((stats.present / stats.total) * 100)}%)
-                    </Typography>
-                  </Typography>
-                </Box>
-                <Typography color="text.secondary">
-                  Present
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <AbsentIcon sx={{ mr: 1, color: 'error.main' }} />
-                  <Typography variant="h6" component="div">
-                    {stats.absent}
-                    <Typography component="span" variant="body2" sx={{ ml: 1 }}>
-                      ({Math.round((stats.absent / stats.total) * 100)}%)
-                    </Typography>
-                  </Typography>
-                </Box>
-                <Typography color="text.secondary">
-                  Absent
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {selectedStudents.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Paper sx={{ p: 2 }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Typography>
-                  {selectedStudents.length} students selected
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={() => handleBulkAttendance('present')}
-                  startIcon={<CheckCircleIcon />}
-                >
-                  Mark Present
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={() => handleBulkAttendance('absent')}
-                  startIcon={<AbsentIcon />}
-                >
-                  Mark Absent
-                </Button>
-              </Stack>
-            </Paper>
-          </Box>
+        {isLoadingAttendance && (
+          <CircularProgress size={24} />
         )}
+      </Box>
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    indeterminate={
-                      selectedStudents.length > 0 && 
-                      selectedStudents.length < filteredStudents.length
-                    }
-                    checked={
-                      filteredStudents.length > 0 && 
-                      selectedStudents.length === filteredStudents.length
-                    }
-                    onChange={handleSelectAll}
-                  />
-                </TableCell>
-                <TableCell>Student Name</TableCell>
-                <TableCell>Batch</TableCell>
-                <TableCell align="center">Attendance</TableCell>
-                <TableCell align="right">Attendance Rate</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredStudents.map((student) => {
-                const attendanceRate = getStudentAttendanceRate(student.id);
-                return (
-                  <TableRow 
-                    key={student.id}
-                    selected={selectedStudents.includes(student.id)}
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={selectedStudents.includes(student.id)}
-                        onChange={() => handleSelectStudent(student.id)}
-                      />
-                    </TableCell>
-                    <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.batch}</TableCell>
-                    <TableCell align="center">
-                      <ToggleButtonGroup
-                        value={attendanceData[selectedDate]?.[student.id] || 'absent'}
-                        exclusive
-                        onChange={(e, newValue) => {
-                          if (newValue !== null) {
-                            handleAttendanceChange(student.id, newValue);
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <CalendarIcon sx={{ mr: 1 }} />
+                <Typography variant="h6" component="div">
+                  {showingDate}
+                  {isLateAttendance && showLateAttendance && (
+                    <Chip
+                      size="small"
+                      color="warning"
+                      label="Late Attendance"
+                      sx={{ ml: 1 }}
+                    />
+                  )}
+                </Typography>
+              </Box>
+              <Typography color="text.secondary">
+                Selected Date
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <PersonIcon sx={{ mr: 1 }} />
+                <Typography variant="h6" component="div">
+                  {stats.total}
+                </Typography>
+              </Box>
+              <Typography color="text.secondary">
+                Total Students
+              </Typography>
+              <LinearProgress 
+                variant="determinate" 
+                value={stats.percentage}
+                sx={{ mt: 1 }}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <PresentIcon sx={{ mr: 1, color: 'success.main' }} />
+                <Typography variant="h6" component="div">
+                  {stats.present}
+                  <Typography component="span" variant="body2" sx={{ ml: 1 }}>
+                    ({Math.round((stats.present / stats.total) * 100)}%)
+                  </Typography>
+                </Typography>
+              </Box>
+              <Typography color="text.secondary">
+                Present
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <AbsentIcon sx={{ mr: 1, color: 'error.main' }} />
+                <Typography variant="h6" component="div">
+                  {stats.absent}
+                  <Typography component="span" variant="body2" sx={{ ml: 1 }}>
+                    ({Math.round((stats.absent / stats.total) * 100)}%)
+                  </Typography>
+                </Typography>
+              </Box>
+              <Typography color="text.secondary">
+                Absent
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {selectedStudents.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Paper sx={{ p: 2 }}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography>
+                {selectedStudents.length} students selected
+              </Typography>
+              <Button
+                variant="contained"
+                color="success"
+                onClick={() => handleBulkAttendance('present')}
+                startIcon={<CheckCircleIcon />}
+              >
+                Mark Present
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => handleBulkAttendance('absent')}
+                startIcon={<AbsentIcon />}
+              >
+                Mark Absent
+              </Button>
+            </Stack>
+          </Paper>
+        </Box>
+      )}
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  indeterminate={
+                    selectedStudents.length > 0 && 
+                    selectedStudents.length < filteredStudents.length
+                  }
+                  checked={
+                    filteredStudents.length > 0 && 
+                    selectedStudents.length === filteredStudents.length
+                  }
+                  onChange={handleSelectAll}
+                />
+              </TableCell>
+              <TableCell>Student Name</TableCell>
+              <TableCell>Batch</TableCell>
+              <TableCell align="center">Attendance</TableCell>
+              <TableCell align="right">Attendance Rate</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredStudents.map((student) => {
+              const attendanceRate = getStudentAttendanceRate(student.id);
+              return (
+                <TableRow 
+                  key={student.id}
+                  selected={selectedStudents.includes(student.id)}
+                >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedStudents.includes(student.id)}
+                      onChange={() => handleSelectStudent(student.id)}
+                    />
+                  </TableCell>
+                  <TableCell>{student.name}</TableCell>
+                  <TableCell>{student.batch}</TableCell>
+                  <TableCell align="center">
+                    <ToggleButtonGroup
+                      value={attendanceData[selectedDate]?.[student.id] || 'absent'}
+                      exclusive
+                      onChange={(e, newValue) => {
+                        if (newValue !== null) {
+                          handleAttendanceChange(student.id, newValue);
+                        }
+                      }}
+                      size="small"
+                      disabled={isLoadingAttendance}
+                    >
+                      <ToggleButton 
+                        value="present" 
+                        sx={{ 
+                          '&.Mui-selected': { 
+                            backgroundColor: 'success.light',
+                            color: 'success.contrastText',
+                            '&:hover': { backgroundColor: 'success.main' }
                           }
                         }}
-                        size="small"
                       >
-                        <ToggleButton 
-                          value="present" 
-                          sx={{ 
-                            '&.Mui-selected': { 
-                              backgroundColor: 'success.light',
-                              color: 'success.contrastText',
-                              '&:hover': { backgroundColor: 'success.main' }
-                            }
-                          }}
-                        >
-                          Present
-                        </ToggleButton>
-                        <ToggleButton 
-                          value="absent"
-                          sx={{ 
-                            '&.Mui-selected': { 
-                              backgroundColor: 'error.light',
-                              color: 'error.contrastText',
-                              '&:hover': { backgroundColor: 'error.main' }
-                            }
-                          }}
-                        >
-                          Absent
-                        </ToggleButton>
-                      </ToggleButtonGroup>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                        <Typography variant="body2" sx={{ mr: 1 }}>
-                          {attendanceRate}%
-                        </Typography>
-                        <Box sx={{ width: 100 }}>
-                          <LinearProgress 
-                            variant="determinate" 
-                            value={attendanceRate}
-                            color={attendanceRate >= 75 ? 'success' : attendanceRate >= 50 ? 'warning' : 'error'}
-                          />
-                        </Box>
+                        Present
+                      </ToggleButton>
+                      <ToggleButton 
+                        value="absent"
+                        sx={{ 
+                          '&.Mui-selected': { 
+                            backgroundColor: 'error.light',
+                            color: 'error.contrastText',
+                            '&:hover': { backgroundColor: 'error.main' }
+                          }
+                        }}
+                      >
+                        Absent
+                      </ToggleButton>
+                    </ToggleButtonGroup>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                      <Typography variant="body2" sx={{ mr: 1 }}>
+                        {attendanceRate}%
+                      </Typography>
+                      <Box sx={{ width: 100 }}>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={attendanceRate}
+                          color={attendanceRate >= 75 ? 'success' : attendanceRate >= 50 ? 'warning' : 'error'}
+                        />
                       </Box>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </>
-    );
-  };
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {filteredStudents.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No students found matching your search criteria
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
 
   const HistoryView = () => (
     <>
@@ -2015,13 +2106,75 @@ const VisualizationsView = React.memo(({
   );
 });
 
-const FeesDashboard = () => {
+const FeesDashboard = ({ initialTab }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
-  // Remove openReminder state
+  // Add user role state
+  const [userRole] = useState(localStorage.getItem('userRole') || 'admin');
+  const [userName] = useState(localStorage.getItem('userName') || 'Admin User');
+  
+  // Set initial tab based on role and initialTab prop
+  const getInitialTab = () => {
+    if (userRole === 'trainer') return 2;
+    if (initialTab === 'attendance') return 2;
+    if (initialTab === 'visualizations') return 1;
+    return 0;
+  };
+  
+  const [selectedTab, setSelectedTab] = useState(getInitialTab());
   const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [attendanceData, setAttendanceData] = useState({});
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+
+  // Fetch students and attendance data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching initial data...');
+        
+        // Fetch students data
+        const data = await api.getStudents();
+        console.log('Fetched students:', data);
+        setStudents(data);
+        
+        // Fetch attendance data for current date
+        const today = format(new Date(), 'yyyy-MM-dd');
+        console.log('Fetching attendance:', { date: today, batch: 'all' });
+        const attendance = await api.getAttendance(today, 'all');
+        console.log('Fetched attendance data:', attendance);
+        
+        // Initialize attendance map with 'absent' for all students
+        const attendanceMap = {};
+        data.forEach(student => {
+          attendanceMap[student.id] = 'absent';
+        });
+        
+        // Update with actual attendance data if available
+        if (attendance && attendance.length > 0) {
+          attendance.forEach(record => {
+            attendanceMap[record.studentId] = record.status;
+          });
+        }
+        
+        setAttendanceData({ [today]: attendanceMap });
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to fetch data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Remove openReminder state
   const [overdueStudents, setOverdueStudents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('all');
@@ -2032,7 +2185,6 @@ const FeesDashboard = () => {
   const [order, setOrder] = useState('desc');
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState('3');
-  const [selectedTab, setSelectedTab] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [newStudent, setNewStudent] = useState({
@@ -2060,13 +2212,6 @@ const FeesDashboard = () => {
   const [sessionTimeout, setSessionTimeout] = useState(null);
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const [anchorElProfile, setAnchorElProfile] = useState(null);
-  const [userProfile] = useState({
-    name: 'Admin User',
-    email: 'admin@example.com',
-    role: 'Administrator'
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   // Session timeout constants
   const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000; // 30 minutes
@@ -2192,25 +2337,6 @@ const FeesDashboard = () => {
       });
     };
   }, [sessionTimeout, navigate]);
-
-  // Fetch students from API
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getStudents();
-        setStudents(data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to fetch students data');
-        console.error('Error fetching students:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudents();
-  }, []);
 
   // Handlers for student management
   const handleAddStudent = async () => {
@@ -2385,18 +2511,22 @@ const FeesDashboard = () => {
       <Logo />
       <Divider />
       <List>
-        <ListItem button selected={selectedTab === 0} onClick={() => setSelectedTab(0)}>
-          <ListItemIcon>
-            <TableChartIcon />
-          </ListItemIcon>
-          <ListItemText primary="Detailed View" />
-        </ListItem>
-        <ListItem button selected={selectedTab === 1} onClick={() => setSelectedTab(1)}>
-          <ListItemIcon>
-            <InsertChartIcon />
-          </ListItemIcon>
-          <ListItemText primary="Visualizations" />
-        </ListItem>
+        {userRole === 'admin' && (
+          <>
+            <ListItem button selected={selectedTab === 0} onClick={() => setSelectedTab(0)}>
+              <ListItemIcon>
+                <TableChartIcon />
+              </ListItemIcon>
+              <ListItemText primary="Detailed View" />
+            </ListItem>
+            <ListItem button selected={selectedTab === 1} onClick={() => setSelectedTab(1)}>
+              <ListItemIcon>
+                <InsertChartIcon />
+              </ListItemIcon>
+              <ListItemText primary="Visualizations" />
+            </ListItem>
+          </>
+        )}
         <ListItem button selected={selectedTab === 2} onClick={() => setSelectedTab(2)}>
           <ListItemIcon>
             <TodayIcon />
@@ -2408,6 +2538,22 @@ const FeesDashboard = () => {
   );
 
   const mainContent = () => {
+    if (loading) {
+      return (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (error) {
+      return (
+        <Box sx={{ p: 3 }}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      );
+    }
+
     switch(selectedTab) {
       case 0:
         return <DetailedView 
@@ -2442,6 +2588,10 @@ const FeesDashboard = () => {
           students={students} 
           uniqueBatches={uniqueBatches} 
           batchSummary={batchSummary}
+          attendanceData={attendanceData}
+          setAttendanceData={setAttendanceData}
+          isLoadingAttendance={isLoadingAttendance}
+          setIsLoadingAttendance={setIsLoadingAttendance}
         />;
       default:
         return <DetailedView />;
@@ -2467,6 +2617,8 @@ const FeesDashboard = () => {
 
   const handleLogoutConfirm = () => {
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
     navigate('/');
     setSnackbar({ open: true, message: 'Logged out successfully!', severity: 'success' });
   };
@@ -2486,23 +2638,6 @@ const FeesDashboard = () => {
     setShowSessionWarning(false);
     handleLogoutConfirm();
   };
-
-  // Add loading state handling in the render
-  if (loading) {
-    return (
-      <Box sx={{ width: '100%', mt: 4 }}>
-        <LinearProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ width: '100%', mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -2525,7 +2660,9 @@ const FeesDashboard = () => {
               <MenuIcon />
             </IconButton>
             <Typography variant="h6" noWrap component="div">
-              {selectedTab === 0 ? 'Detailed View' : selectedTab === 1 ? 'Visualizations' : 'Attendance'}
+              {userRole === 'trainer' ? 'Attendance Management' : 
+                selectedTab === 0 ? 'Detailed View' : 
+                selectedTab === 1 ? 'Visualizations' : 'Attendance'}
             </Typography>
           </Box>
 
@@ -2537,7 +2674,7 @@ const FeesDashboard = () => {
               onClick={handleProfileClick}
             >
               <Avatar sx={{ bgcolor: 'primary.dark' }}>
-                {userProfile.name.charAt(0)}
+                {userName.charAt(0)}
               </Avatar>
             </IconButton>
           </Box>
@@ -2559,12 +2696,12 @@ const FeesDashboard = () => {
         <MenuItem>
           <ListItemAvatar>
             <Avatar sx={{ bgcolor: 'primary.dark' }}>
-              {userProfile.name.charAt(0)}
+              {userName.charAt(0)}
             </Avatar>
           </ListItemAvatar>
           <ListItemText 
-            primary={userProfile.name}
-            secondary={userProfile.email}
+            primary={userName}
+            secondary={userRole === 'admin' ? 'Administrator' : 'Trainer'}
           />
         </MenuItem>
         <Divider />

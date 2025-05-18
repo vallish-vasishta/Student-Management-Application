@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/database');
 const studentRoutes = require('./routes/studentRoutes');
-
+const attendanceRoutes = require('./routes/attendanceRoutes');
 const app = express();
 
 app.use(cors());
@@ -10,6 +10,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/students', studentRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // Database sync and server start
 const PORT = process.env.PORT || 5000;

@@ -1,6 +1,7 @@
-'use strict';
+// 'use strict';
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/connection');
+// const sequelize = require('../config/connection');
+const sequelize = require('../config/database');
 const Student = require('./Student');
 
 const Attendance = sequelize.define('Attendance', {

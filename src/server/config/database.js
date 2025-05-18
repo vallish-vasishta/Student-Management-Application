@@ -1,9 +1,5 @@
 const { Sequelize } = require('sequelize');
-const config = require('./database');
-
-const env = process.env.NODE_ENV || 'development';
-const dbConfig = config[env];
-
+require('dotenv').config();
 
 const sequelize = new Sequelize({
   dialect: 'postgres',
@@ -12,7 +8,7 @@ const sequelize = new Sequelize({
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'student_management',
-  logging: false,
+  logging: console.log,
   pool: {
     max: 5,
     min: 0,
@@ -20,5 +16,18 @@ const sequelize = new Sequelize({
     idle: 10000
   }
 });
+
+// Test the connection
+sequelize.authenticate()
+  .then(() => {
+    console.log('Database connection has been established successfully.');
+    return sequelize.sync({ alter: true }); // This will create/update tables
+  })
+  .then(() => {
+    console.log('Database models synchronized successfully.');
+  })
+  .catch(err => {
+    console.error('Unable to connect to the database:', err);
+  });
 
 module.exports = sequelize; 

@@ -1,8 +1,7 @@
-const Student = require('./Student');
-const Attendance = require('./Attendance');
-const sequelize = require('../config/database');
+const Student = require('./student');
+const Attendance = require('./attendance');
 
-// Define associations
+// Set up associations
 Student.hasMany(Attendance, {
   foreignKey: 'studentId',
   as: 'attendance'
@@ -12,8 +11,6 @@ Attendance.belongsTo(Student, {
   foreignKey: 'studentId',
   as: 'student'
 });
-
-sequelize.sync()
 
 module.exports = {
   Student,
