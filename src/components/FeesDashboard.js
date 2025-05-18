@@ -219,7 +219,7 @@ const Logo = () => (
   <LogoContainer>
     <img 
       src="/logo.png" 
-      alt="Shadows Dance Studio" 
+      alt="Siliconcity Sports Academy" 
       style={{ maxHeight: '100px' }}
     />
   </LogoContainer>
