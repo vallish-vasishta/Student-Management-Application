@@ -2540,7 +2540,7 @@ const FeesDashboard = ({ initialTab }) => {
   const mainContent = () => {
     if (loading) {
       return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
           <CircularProgress />
         </Box>
       );
@@ -2548,7 +2548,7 @@ const FeesDashboard = ({ initialTab }) => {
 
     if (error) {
       return (
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: 2 }}>
           <Alert severity="error">{error}</Alert>
         </Box>
       );
@@ -2556,45 +2556,61 @@ const FeesDashboard = ({ initialTab }) => {
 
     switch(selectedTab) {
       case 0:
-        return <DetailedView 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          selectedBatch={selectedBatch}
-          setSelectedBatch={setSelectedBatch}
-          selectedStatus={selectedStatus}
-          setSelectedStatus={setSelectedStatus}
-          uniqueBatches={uniqueBatches}
-          filteredStudents={filteredStudents}
-          orderBy={orderBy}
-          order={order}
-          handleSort={handleSort}
-          getRowStyle={getRowStyle}
-          handleMarkAsPaid={handleMarkAsPaid}
-          handleDeleteStudent={handleDeleteStudent}
-          setOpenAddDialog={setOpenAddDialog}
-          setSelectedStudent={setSelectedStudent}
-          setOpenEditDialog={setOpenEditDialog}
-          batchSummary={batchSummary}
-        />;
+        return (
+          <Box sx={{ p: 2 }}>
+            <DetailedView 
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              selectedBatch={selectedBatch}
+              setSelectedBatch={setSelectedBatch}
+              selectedStatus={selectedStatus}
+              setSelectedStatus={setSelectedStatus}
+              uniqueBatches={uniqueBatches}
+              filteredStudents={filteredStudents}
+              orderBy={orderBy}
+              order={order}
+              handleSort={handleSort}
+              getRowStyle={getRowStyle}
+              handleMarkAsPaid={handleMarkAsPaid}
+              handleDeleteStudent={handleDeleteStudent}
+              setOpenAddDialog={setOpenAddDialog}
+              setSelectedStudent={setSelectedStudent}
+              setOpenEditDialog={setOpenEditDialog}
+              batchSummary={batchSummary}
+            />
+          </Box>
+        );
       case 1:
-        return <VisualizationsView 
-          filteredStudents={filteredStudents}
-          students={students}
-          batchSummary={batchSummary}
-          selectedTimeRange={selectedTimeRange}
-        />;
+        return (
+          <Box sx={{ p: 2 }}>
+            <VisualizationsView 
+              filteredStudents={filteredStudents}
+              students={students}
+              batchSummary={batchSummary}
+              selectedTimeRange={selectedTimeRange}
+            />
+          </Box>
+        );
       case 2:
-        return <AttendanceView 
-          students={students} 
-          uniqueBatches={uniqueBatches} 
-          batchSummary={batchSummary}
-          attendanceData={attendanceData}
-          setAttendanceData={setAttendanceData}
-          isLoadingAttendance={isLoadingAttendance}
-          setIsLoadingAttendance={setIsLoadingAttendance}
-        />;
+        return (
+          <Box sx={{ p: 2 }}>
+            <AttendanceView 
+              students={students} 
+              uniqueBatches={uniqueBatches} 
+              batchSummary={batchSummary}
+              attendanceData={attendanceData}
+              setAttendanceData={setAttendanceData}
+              isLoadingAttendance={isLoadingAttendance}
+              setIsLoadingAttendance={setIsLoadingAttendance}
+            />
+          </Box>
+        );
       default:
-        return <DetailedView />;
+        return (
+          <Box sx={{ p: 2 }}>
+            <DetailedView />
+          </Box>
+        );
     }
   };
 
@@ -2760,12 +2776,13 @@ const FeesDashboard = ({ initialTab }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          marginLeft: { sm: `${drawerWidth}px` }
+          p: 0, // Remove default padding
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          mt: '64px', // Height of AppBar
+          height: 'calc(100vh - 64px)',
+          overflow: 'auto'
         }}
       >
-        <Toolbar />
         {mainContent()}
       </Box>
 

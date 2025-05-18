@@ -21,8 +21,8 @@ const Login = () => {
     
     // Define valid credentials for both roles
     const validCredentials = {
-      admin: { username: 'admin', password: 'password' },
-      trainer: { username: 'trainer', password: 'trainer123' }
+      admin: { username: 'admin', password: 'mQD6EOg5' },
+      trainer: { username: 'trainer', password: 'QY3yO4rM' }
     };
 
     // Determine role based on credentials
