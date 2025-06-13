@@ -1,33 +1,50 @@
 const express = require('express');
 const router2 = express.Router();
-const { Attendance, Student } = require('../models');
+const { Attendance, Student, Batch } = require('../models');
 const { Op } = require('sequelize');
 
 // Get attendance for a specific date and batch
 router2.get('/', async (req, res) => {
   try {
     const { date, batch } = req.query;
-    const where = {};
-    
-    if (date) {
-      where.date = date;
-    }
-    
+    const studentWhere = {};
     if (batch && batch !== 'all') {
-      where['$student.batch$'] = batch;
+      studentWhere.batchId = batch;
     }
-
-    const attendance = await Attendance.findAll({
-      where,
+    // 1. Get all students for the batch
+    const students = await Student.findAll({
+      where: studentWhere,
       include: [{
-        model: Student,
-        as: 'student',
-        attributes: ['id', 'name', 'batch']
+        model: Batch,
+        as: 'batch',
+        attributes: ['id', 'name', 'timings']
       }]
     });
-
-    console.log('Fetched attendance:', attendance);
-    res.json(attendance);
+    // 2. Get attendance records for the date and batch
+    const attendanceRecords = await Attendance.findAll({
+      where: {
+        ...(date ? { date } : {}),
+        studentId: { [Op.in]: students.map(s => s.id) }
+      }
+    });
+    // 3. Map attendance by studentId for quick lookup
+    const attendanceMap = {};
+    attendanceRecords.forEach(record => {
+      attendanceMap[record.studentId] = record;
+    });
+    // 4. Build the response: for each student, use attendance record or default absent
+    const today = date || new Date().toISOString().slice(0, 10);
+    const result = students.map(student => {
+      const record = attendanceMap[student.id];
+      return {
+        id: record ? record.id : null,
+        studentId: student.id,
+        date: record ? record.date : today,
+        status: record ? record.status : 'absent',
+        student: student
+      };
+    });
+    res.json(result);
   } catch (error) {
     console.error('Error fetching attendance:', error);
     res.status(500).json({ message: 'Error fetching attendance records' });
@@ -47,7 +64,7 @@ router2.get('/history', async (req, res) => {
     }
     
     if (batch && batch !== 'all') {
-      where['$student.batch$'] = batch;
+      where['$student.batchId$'] = batch;
     }
 
     const attendance = await Attendance.findAll({
@@ -55,7 +72,12 @@ router2.get('/history', async (req, res) => {
       include: [{
         model: Student,
         as: 'student',
-        attributes: ['id', 'name', 'batch']
+        attributes: ['id', 'name', 'contact', 'batchId'],
+        include: [{
+          model: Batch,
+          as: 'batch',
+          attributes: ['id', 'name', 'timings']
+        }]
       }]
     });
 
@@ -130,7 +152,12 @@ router2.post('/', async (req, res) => {
       include: [{
         model: Student,
         as: 'student',
-        attributes: ['id', 'name', 'batch']
+        attributes: ['id', 'name', 'contact', 'batchId'],
+        include: [{
+          model: Batch,
+          as: 'batch',
+          attributes: ['id', 'name', 'timings']
+        }]
       }]
     });
 
@@ -173,7 +200,12 @@ router2.put('/:id', async (req, res) => {
       include: [{
         model: Student,
         as: 'student',
-        attributes: ['id', 'name', 'batch']
+        attributes: ['id', 'name', 'contact', 'batchId'],
+        include: [{
+          model: Batch,
+          as: 'batch',
+          attributes: ['id', 'name', 'timings']
+        }]
       }]
     });
 

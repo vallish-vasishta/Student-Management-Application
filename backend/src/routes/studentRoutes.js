@@ -1,17 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const Student = require('../models/Student');
+const { Student, Batch } = require('../models');
 const { Op } = require('sequelize');
 
-// Get all students with optional filters
+// Get all students (with batch info)
 router.get('/', async (req, res) => {
+  try {
+    const students = await Student.findAll({ include: [{ model: Batch, as: 'batch' }] });
+    res.json(students);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get student by id
+router.get('/:id', async (req, res) => {
+  try {
+    const student = await Student.findByPk(req.params.id, { include: [{ model: Batch, as: 'batch' }] });
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+    res.json(student);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all students with optional filters
+router.get('/filter', async (req, res) => {
   try {
     const { batch, status, month, searchQuery } = req.query;
     
     let whereClause = {};
     
     if (batch) {
-      whereClause.batch = batch;
+      whereClause.batchId = batch;
     }
     
     if (status) {
@@ -25,12 +46,13 @@ router.get('/', async (req, res) => {
     if (searchQuery) {
       whereClause[Op.or] = [
         { name: { [Op.iLike]: `%${searchQuery}%` } },
-        { batch: { [Op.iLike]: `%${searchQuery}%` } }
+        { batchId: { [Op.iLike]: `%${searchQuery}%` } }
       ];
     }
     
     const students = await Student.findAll({
       where: whereClause,
+      include: [{ model: Batch, as: 'batch' }],
       order: [['feesMonth', 'DESC'], ['name', 'ASC']]
     });
     
@@ -54,8 +76,8 @@ router.get('/batch-summary', async (req, res) => {
     const students = await Student.findAll({ where: whereClause });
     
     const batchSummary = students.reduce((acc, student) => {
-      if (!acc[student.batch]) {
-        acc[student.batch] = {
+      if (!acc[student.batchId]) {
+        acc[student.batchId] = {
           totalStudents: 0,
           paidCount: 0,
           unpaidCount: 0,
@@ -65,7 +87,7 @@ router.get('/batch-summary', async (req, res) => {
         };
       }
       
-      const batch = acc[student.batch];
+      const batch = acc[student.batchId];
       batch.totalStudents++;
       batch.totalAmount += student.amount;
       
@@ -119,76 +141,42 @@ router.get('/monthly-summary', async (req, res) => {
   }
 });
 
-// Add new student
+// Create student
 router.post('/', async (req, res) => {
   try {
-    console.log('Received request to add student:', req.body);
-    
-    if (!req.body.name || !req.body.batch || !req.body.feesMonth || !req.body.amount) {
-      return res.status(400).json({
-        message: 'Missing required fields',
-        required: ['name', 'batch', 'feesMonth', 'amount'],
-        received: req.body
-      });
-    }
-    
-    const student = await Student.create({
-      ...req.body,
-      status: req.body.status || 'Unpaid' // Default to 'Unpaid' if not provided
-    });
-    
-    console.log('Successfully created student:', student.toJSON());
+    const { id, name, batchId, contact } = req.body;
+    const student = await Student.create({ id, name, batchId, contact });
     res.status(201).json(student);
-  } catch (error) {
-    console.error('Error creating student:', error);
-    res.status(400).json({ 
-      message: error.message,
-      details: error.errors?.map(e => e.message) || [],
-      receivedData: req.body
-    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 // Update student
 router.put('/:id', async (req, res) => {
   try {
+    const { name, batchId, contact } = req.body;
     const student = await Student.findByPk(req.params.id);
-    if (!student) {
-      return res.status(404).json({ message: 'Student not found' });
-    }
-    await student.update(req.body);
+    if (!student) return res.status(404).json({ error: 'Student not found' });
+    student.name = name;
+    student.batchId = batchId;
+    student.contact = contact;
+    await student.save();
     res.json(student);
-  } catch (error) {
-    console.error('Error updating student:', error);
-    res.status(400).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
 // Delete student
 router.delete('/:id', async (req, res) => {
   try {
-    console.log('Received request to delete student:', req.params.id);
-    
     const student = await Student.findByPk(req.params.id);
-    if (!student) {
-      console.log('Student not found with ID:', req.params.id);
-      return res.status(404).json({ 
-        message: 'Student not found',
-        requestedId: req.params.id
-      });
-    }
-    
-    const studentData = student.toJSON(); // Save data before deletion for logging
+    if (!student) return res.status(404).json({ error: 'Student not found' });
     await student.destroy();
-    
-    console.log('Successfully deleted student:', studentData);
-    res.status(204).send();
-  } catch (error) {
-    console.error('Error deleting student:', error);
-    res.status(500).json({ 
-      message: error.message,
-      requestedId: req.params.id
-    });
+    res.json({ message: 'Student deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

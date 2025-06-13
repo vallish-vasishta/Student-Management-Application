@@ -92,10 +92,15 @@ import {
   Class as ClassIcon,
   Assessment as AssessmentIcon,
   EventNote as EventNoteIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  People as PeopleIcon,
+  GroupWork as GroupWorkIcon,
+  Pencil as PencilIcon,
+  Trash as TrashIcon
 } from '@mui/icons-material';
 import { format, isPast, parseISO, isAfter, isBefore, subDays, addDays, startOfMonth } from 'date-fns';
 import { utils as xlsxUtils, writeFile } from 'xlsx';
+import * as XLSX from 'xlsx';
 import {
   AreaChart,
   Area,
@@ -113,6 +118,8 @@ import {
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import api from '../services/api';
+import StudentsView from './StudentsView';
+import BatchesView from './BatchesView';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
@@ -229,283 +236,304 @@ const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
-const AddStudentDialog = React.memo(({ 
-  open, 
-  onClose, 
-  onAdd, 
-  uniqueBatches, 
-  newStudent, 
-  onInputChange 
-}) => {
-  const [isNewBatch, setIsNewBatch] = useState(false);
-  const [newBatchName, setNewBatchName] = useState('');
-  const [batchError, setBatchError] = useState('');
+const AddStudentDialog = ({ open, onClose, onAdd }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    batch: '',
+    feesMonth: format(new Date(), 'yyyy-MM'),
+    amount: '',
+    status: 'Unpaid',
+    paymentDate: format(new Date(), 'yyyy-MM-dd'),
+    paymentMode: 'Cash'
+  });
 
-  const handleBatchChange = (event) => {
-    const value = event.target.value;
-    if (value === 'new') {
-      setIsNewBatch(true);
-      onInputChange({ target: { name: 'batch', value: '' } });
-    } else {
-      setIsNewBatch(false);
-      onInputChange(event);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await onAdd(formData);
+      onClose();
+    } catch (error) {
+      console.error('Error adding student:', error);
     }
-  };
-
-  const handleNewBatchChange = (event) => {
-    const value = event.target.value;
-    setNewBatchName(value);
-    
-    // Update batch name validation
-    if (value && !/^[A-Za-z]+-[A-Za-z]+(-[A-Za-z]+)?$/.test(value)) {
-      setBatchError('Batch should be in format: Style-Level (e.g., Freestyle-Senior)');
-    } else {
-      setBatchError('');
-      onInputChange({ target: { name: 'batch', value } });
-    }
-  };
-
-  const handleClose = () => {
-    setIsNewBatch(false);
-    setNewBatchName('');
-    setBatchError('');
-    onClose();
-  };
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    onAdd();
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-    >
-      <form onSubmit={handleSubmit}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle>Add New Student</DialogTitle>
+      <form onSubmit={handleSubmit}>
         <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Please fill in the student details below
-          </DialogContentText>
-          <Stack spacing={2} sx={{ mt: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
             <TextField
-              autoFocus
-              name="name"
-              label="Student Name"
-              type="text"
               fullWidth
-              value={newStudent.name}
-              onChange={onInputChange}
+                label="Student Name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
               required
             />
-            
-            {!isNewBatch ? (
-              <FormControl fullWidth required>
-                <InputLabel>Batch</InputLabel>
-                <Select
-                  name="batch"
-                  value={newStudent.batch}
-                  onChange={handleBatchChange}
-                  label="Batch"
-                >
-                  {uniqueBatches.map((batch) => (
-                    <MenuItem key={batch} value={batch}>
-                      {batch}
-                    </MenuItem>
-                  ))}
-                  <MenuItem value="new" sx={{ color: 'primary.main' }}>
-                    <AddIcon sx={{ mr: 1 }} />
-                    Add New Batch
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            ) : (
+            </Grid>
+            <Grid item xs={12}>
               <TextField
-                name="newBatch"
-                label="New Batch"
-                type="text"
                 fullWidth
-                value={newBatchName}
-                onChange={handleNewBatchChange}
+                label="Batch"
+                name="batch"
+                value={formData.batch}
+                onChange={handleChange}
                 required
-                error={Boolean(batchError)}
-                helperText={batchError || "Enter batch in format: Style-Level (e.g., Freestyle-Senior)"}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton 
-                        onClick={() => {
-                          setIsNewBatch(false);
-                          setNewBatchName('');
-                          setBatchError('');
-                          onInputChange({ target: { name: 'batch', value: '' } });
-                        }}
-                        edge="end"
-                      >
-                        <CloseIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
               />
-            )}
-
+            </Grid>
+            <Grid item xs={12}>
             <TextField
-              name="feesMonth"
-              label="Fees Month"
-              type="date"
               fullWidth
-              value={newStudent.feesMonth}
-              onChange={onInputChange}
-              InputLabelProps={{
-                shrink: true,
-              }}
+                label="Fees Month"
+                name="feesMonth"
+                type="month"
+                value={formData.feesMonth}
+                onChange={handleChange}
               required
+                InputLabelProps={{ shrink: true }}
             />
+            </Grid>
+            <Grid item xs={12}>
             <TextField
+                fullWidth
+                label="Amount"
               name="amount"
-              label="Fees Amount"
               type="number"
-              fullWidth
-              value={newStudent.amount}
-              onChange={onInputChange}
+                value={formData.amount}
+                onChange={handleChange}
+                required
               InputProps={{
                 startAdornment: <InputAdornment position="start">₹</InputAdornment>,
               }}
-              required
-            />
-            <TextField
-              select
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
               name="status"
-              label="Payment Status"
-              fullWidth
-              value={newStudent.status}
-              onChange={onInputChange}
-              required
+                  value={formData.status}
+                  onChange={handleChange}
+                  label="Status"
             >
               <MenuItem value="Paid">Paid</MenuItem>
               <MenuItem value="Unpaid">Unpaid</MenuItem>
-            </TextField>
-          </Stack>
+                </Select>
+              </FormControl>
+            </Grid>
+            {formData.status === 'Paid' && (
+              <>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Payment Date"
+                    name="paymentDate"
+                    type="date"
+                    value={formData.paymentDate}
+                    onChange={handleChange}
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Payment Mode</InputLabel>
+                    <Select
+                      name="paymentMode"
+                      value={formData.paymentMode}
+                      onChange={handleChange}
+                      label="Payment Mode"
+                    >
+                      <MenuItem value="Cash">Cash</MenuItem>
+                      <MenuItem value="UPI">UPI</MenuItem>
+                      <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
+                      <MenuItem value="Cheque">Cheque</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
+          </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button 
-            type="submit"
-            variant="contained"
-            disabled={
-              !newStudent.name || 
-              !newStudent.batch || 
-              !newStudent.amount ||
-              (isNewBatch && Boolean(batchError))
-            }
-          >
+          <Button onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="contained" color="primary">
             Add Student
           </Button>
         </DialogActions>
       </form>
     </Dialog>
   );
-});
+};
 
 const EditStudentDialog = React.memo(({ 
   open, 
   onClose, 
-  onUpdate, 
-  uniqueBatches, 
-  editStudent, 
-  onInputChange 
-}) => (
-  <Dialog 
-    open={open} 
-    onClose={onClose}
-    maxWidth="sm"
-    fullWidth
-  >
-    <DialogTitle>Edit Student Details</DialogTitle>
+  onEdit, 
+  student,
+  uniqueBatches 
+}) => {
+  const [formData, setFormData] = useState({
+    feesMonth: format(new Date(), 'yyyy-MM'),
+    amount: '',
+    status: 'Unpaid',
+    paymentDate: format(new Date(), 'yyyy-MM-dd'),
+    paymentMode: 'Cash'
+  });
+
+  useEffect(() => {
+    if (student) {
+      const newFormData = {
+        feesMonth: student.feesMonth || format(new Date(), 'yyyy-MM'),
+        amount: student.amount ? String(student.amount) : '',
+        status: student.status || 'Unpaid',
+        paymentDate: student.paymentDate || format(new Date(), 'yyyy-MM-dd'),
+        paymentMode: student.paymentMode || 'Cash'
+      };
+      setFormData(newFormData);
+    }
+  }, [student]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!student?.id) return;
+
+    const updatedData = {
+      ...formData,
+      amount: Number(formData.amount) || 0,
+      paymentDate: formData.status === 'Paid' ? formData.paymentDate : null,
+      paymentMode: formData.status === 'Paid' ? formData.paymentMode : null
+    };
+
+    try {
+      await onEdit(student.id, updatedData);
+      onClose();
+    } catch (error) {
+      console.error('Error updating student fees:', error);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Edit Student Fees</DialogTitle>
+      <form onSubmit={handleSubmit}>
     <DialogContent>
-      <DialogContentText sx={{ mb: 2 }}>
-        Update the student information below
-      </DialogContentText>
-      <Stack spacing={2} sx={{ mt: 2 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>
+                Student: {student?.name}
+              </Typography>
+              <Typography variant="subtitle1" gutterBottom>
+                Batch: {student?.batch?.name || student?.batch || ''}
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
         <TextField
-          autoFocus
-          name="name"
-          label="Student Name"
-          type="text"
           fullWidth
-          value={editStudent.name}
-          onChange={onInputChange}
-          required
-        />
-        <TextField
-          select
-          name="batch"
-          label="Batch"
-          fullWidth
-          value={editStudent.batch}
-          onChange={onInputChange}
-          required
-        >
-          {uniqueBatches.map((batch) => (
-            <MenuItem key={batch} value={batch}>
-              Batch {batch}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          name="feesMonth"
           label="Fees Month"
-          type="date"
-          fullWidth
-          value={editStudent.feesMonth}
-          onChange={onInputChange}
-          InputLabelProps={{
-            shrink: true,
-          }}
+                name="feesMonth"
+                type="month"
+                value={formData.feesMonth}
+                onChange={handleChange}
           required
+                InputLabelProps={{ shrink: true }}
         />
+            </Grid>
+            <Grid item xs={12}>
         <TextField
+                fullWidth
+                label="Amount"
           name="amount"
-          label="Fees Amount"
           type="number"
-          fullWidth
-          value={editStudent.amount}
-          onChange={onInputChange}
+                value={formData.amount}
+                onChange={handleChange}
+                required
           InputProps={{
             startAdornment: <InputAdornment position="start">₹</InputAdornment>,
           }}
-          required
-        />
-        <TextField
-          select
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
           name="status"
-          label="Payment Status"
-          fullWidth
-          value={editStudent.status}
-          onChange={onInputChange}
-          required
+                  value={formData.status}
+                  onChange={handleChange}
+                  label="Status"
         >
           <MenuItem value="Paid">Paid</MenuItem>
           <MenuItem value="Unpaid">Unpaid</MenuItem>
-        </TextField>
-      </Stack>
+                </Select>
+              </FormControl>
+            </Grid>
+            {formData.status === 'Paid' && (
+              <>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Payment Date"
+                    name="paymentDate"
+                    type="date"
+                    value={formData.paymentDate}
+                    onChange={handleChange}
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControl fullWidth>
+                    <InputLabel>Payment Mode</InputLabel>
+                    <Select
+                      name="paymentMode"
+                      value={formData.paymentMode}
+                      onChange={handleChange}
+                      label="Payment Mode"
+                    >
+                      <MenuItem value="Cash">Cash</MenuItem>
+                      <MenuItem value="UPI">UPI</MenuItem>
+                      <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
+                      <MenuItem value="Cheque">Cheque</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              </>
+            )}
+          </Grid>
     </DialogContent>
     <DialogActions>
       <Button onClick={onClose}>Cancel</Button>
-      <Button 
-        onClick={onUpdate}
-        variant="contained"
-        disabled={!editStudent.name || !editStudent.batch || !editStudent.amount}
-      >
-        Update
+          <Button type="submit" variant="contained" color="primary">
+            Update Fees
       </Button>
     </DialogActions>
+      </form>
   </Dialog>
-));
+  );
+});
+
+// Utility to check for valid date string
+function isValidDateString(date) {
+  return date && !isNaN(new Date(date));
+}
 
 const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, attendanceData, setAttendanceData, isLoadingAttendance, setIsLoadingAttendance }) => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -619,7 +647,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
   const handleDateChange = useCallback((event) => {
     const newDate = event.target.value;
     setSelectedDate(newDate);
-    setShowingDate(format(parseISO(newDate), 'MMMM dd, yyyy'));
+    setShowingDate(isValidDateString(newDate) ? format(new Date(newDate), 'MMMM dd, yyyy') : 'Invalid date');
   }, []);
 
   // Memoize handleBatchChange function
@@ -1051,7 +1079,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
                     />
                   </TableCell>
                   <TableCell>{student.name}</TableCell>
-                  <TableCell>{student.batch}</TableCell>
+                  <TableCell>{student.batch?.name || student.batch || ''}</TableCell>
                   <TableCell align="center">
                     <ToggleButtonGroup
                       value={attendanceData[selectedDate]?.[student.id] || 'absent'}
@@ -1336,227 +1364,289 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
   );
 });
 
-const DetailedView = React.memo(({ 
-  searchQuery, 
-  setSearchQuery, 
-  selectedBatch, 
-  setSelectedBatch, 
-  selectedStatus, 
-  setSelectedStatus, 
-  uniqueBatches, 
-  filteredStudents,
-  orderBy,
-  order,
-  handleSort,
-  getRowStyle,
-  handleMarkAsPaid,
-  handleDeleteStudent,
-  setOpenAddDialog,
-  setSelectedStudent,
-  setOpenEditDialog,
-  batchSummary
-}) => {
-  const [exportAnchorEl, setExportAnchorEl] = useState(null);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
-  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
-  const [showAllMonths, setShowAllMonths] = useState(true);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState(null);
-
-  // Get unique months from the last 3 months
-  const availableMonths = useMemo(() => {
-    const months = new Set();
-    const today = new Date();
-    
-    // Add last 3 months
-    for (let i = 0; i < 3; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      months.add(format(date, 'yyyy-MM'));
-    }
-    
-    return Array.from(months).sort().reverse();
+const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
+  // Add a function to get batch name from student object
+  const getBatchName = useCallback((student) => {
+    if (!student) return 'N/A';
+    return student.batch?.name || 'N/A';
   }, []);
 
-  // Filter students by selected month if not showing all months
-  const displayedStudents = useMemo(() => {
-    if (showAllMonths) {
-      return filteredStudents;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBatch, setSelectedBatch] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [fees, setFees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [selectedFee, setSelectedFee] = useState(null);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [newFee, setNewFee] = useState({
+    studentId: '',
+    feesMonth: format(new Date(), 'yyyy-MM'),
+    amount: '',
+    status: 'Unpaid',
+    paymentDate: format(new Date(), 'yyyy-MM-dd'),
+    paymentMode: 'Cash'
+  });
+
+  // Get unique months from fees data
+  const uniqueMonths = useMemo(() => {
+    if (!fees) return ['all'];
+    const months = [...new Set(fees.map(fee => fee.feesMonth))].filter(Boolean);
+    return ['all', ...months.sort().reverse()];
+  }, [fees]);
+
+  // Get unique batches from students
+  const uniqueBatches = useMemo(() => {
+    if (!students) return ['all'];
+    const batches = [...new Set(students.map(student => student.batch?.name || student.batch))].filter(Boolean);
+    return ['all', ...batches.sort()];
+  }, [students]);
+
+  // Filter and sort fees
+  const filteredFees = useMemo(() => {
+    if (!fees) return [];
+    let result = [...fees];
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(fee => 
+        fee.Student?.name?.toLowerCase().includes(query) ||
+        getBatchName(fee.Student)?.toLowerCase().includes(query) ||
+        fee.feesMonth?.toLowerCase().includes(query)
+      );
     }
-    return filteredStudents.filter(student => 
-      format(parseISO(student.feesMonth), 'yyyy-MM') === selectedMonth
+
+    // Filter by batch
+    if (selectedBatch !== 'all') {
+      result = result.filter(fee => 
+        getBatchName(fee.Student) === selectedBatch
+      );
+    }
+
+    // Filter by month
+    if (selectedMonth !== 'all') {
+      result = result.filter(fee => 
+        fee.feesMonth === selectedMonth
+      );
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortField) {
+        case 'name':
+          aValue = a.Student?.name || '';
+          bValue = b.Student?.name || '';
+          break;
+        case 'batch':
+          aValue = getBatchName(a.Student) || '';
+          bValue = getBatchName(b.Student) || '';
+          break;
+        case 'feesMonth':
+          aValue = a.feesMonth || '';
+          bValue = b.feesMonth || '';
+          break;
+        case 'amount':
+          aValue = Number(a.amount) || 0;
+          bValue = Number(b.amount) || 0;
+          break;
+        case 'status':
+          aValue = a.status || '';
+          bValue = b.status || '';
+          break;
+        default:
+          aValue = a[sortField] || '';
+          bValue = b[sortField] || '';
+      }
+
+      if (sortDirection === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    return result;
+  }, [fees, searchQuery, selectedBatch, selectedMonth, sortField, sortDirection, getBatchName]);
+
+  // Fetch fees data
+  const fetchFees = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await api.getFees();
+      setFees(data || []);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching fees:', err);
+      setError('Failed to fetch fee data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFees();
+  }, [fetchFees]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const handleExport = async (format) => {
+    try {
+      const data = filteredFees.map(fee => ({
+        'Student Name': fee.Student?.name || '',
+        'Batch': fee.Student?.batch?.name || fee.Student?.batch || '',
+        'Fees Month': fee.feesMonth || '',
+        'Amount': fee.amount || 0,
+        'Status': fee.status || '',
+        'Payment Date': fee.paymentDate || '',
+        'Payment Mode': fee.paymentMode || ''
+      }));
+
+      if (format === 'excel') {
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Fees Data');
+        XLSX.writeFile(wb, 'fees_data.xlsx');
+      } else if (format === 'pdf') {
+        const doc = new jsPDF();
+        doc.autoTable({
+          head: [['Student Name', 'Batch', 'Fees Month', 'Amount', 'Status', 'Payment Date', 'Payment Mode']],
+          body: data.map(row => Object.values(row))
+        });
+        doc.save('fees_data.pdf');
+      }
+    } catch (error) {
+      console.error('Error exporting data:', error);
+    }
+  };
+
+  const handleAddFee = async (feeData) => {
+    try {
+      await api.addFee(feeData);
+      await fetchFees(); // Refresh fees data
+      setOpenAddDialog(false);
+      setNewFee({
+        studentId: '',
+        feesMonth: format(new Date(), 'yyyy-MM'),
+        amount: '',
+        status: 'Unpaid',
+        paymentDate: format(new Date(), 'yyyy-MM-dd'),
+        paymentMode: 'Cash'
+      });
+    } catch (error) {
+      console.error('Error adding fee:', error);
+    }
+  };
+
+  const handleEditFee = async (feeData) => {
+    try {
+      if (!selectedFee) {
+        console.error('No fee selected for editing');
+        return;
+      }
+
+      const updatedFeeData = {
+        feesMonth: feeData.feesMonth,
+        amount: Number(feeData.amount),
+        status: feeData.status,
+        paymentDate: feeData.status === 'Paid' ? feeData.paymentDate : null,
+        paymentMode: feeData.status === 'Paid' ? feeData.paymentMode : null
+      };
+
+      // Call the API to update the fee
+      await api.updateFees(selectedFee.studentId, updatedFeeData);
+      
+      // Refresh the fees data
+      await fetchFees();
+      
+      // Close the dialog and reset states
+      setOpenEditDialog(false);
+      setSelectedFee(null);
+      setNewFee({
+        studentId: '',
+        feesMonth: format(new Date(), 'yyyy-MM'),
+        amount: '',
+        status: 'Unpaid',
+        paymentDate: format(new Date(), 'yyyy-MM-dd'),
+        paymentMode: 'Cash'
+      });
+    } catch (error) {
+      console.error('Error editing fee:', error);
+    }
+  };
+
+  const handleDeleteFee = async () => {
+    try {
+      await api.deleteFee(selectedFee.studentId, selectedFee.feesMonth);
+      await fetchFees(); // Refresh fees data
+      setOpenDeleteDialog(false);
+      setSelectedFee(null);
+    } catch (error) {
+      console.error('Error deleting fee:', error);
+    }
+  };
+
+  const handleMarkAsPaid = async (fee) => {
+    try {
+      await onMarkAsPaid(fee);
+      await fetchFees(); // Refresh fees data after marking as paid
+    } catch (error) {
+      console.error('Error marking fee as paid:', error);
+    }
+  };
+
+  const handleEditClick = (fee) => {
+    setSelectedFee(fee);
+    // Format the feesMonth to ensure it's in the correct format (YYYY-MM)
+    const formattedMonth = fee.feesMonth ? format(parseISO(fee.feesMonth), 'yyyy-MM') : format(new Date(), 'yyyy-MM');
+    
+    setNewFee({
+      studentId: fee.studentId,
+      feesMonth: formattedMonth,
+      amount: fee.amount,
+      status: fee.status,
+      paymentDate: fee.paymentDate || format(new Date(), 'yyyy-MM-dd'),
+      paymentMode: fee.paymentMode || 'Cash'
+    });
+    setOpenEditDialog(true);
+  };
+
+  if (loading) {
+  return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
     );
-  }, [filteredStudents, selectedMonth, showAllMonths]);
+  }
 
-  const handleExportClick = (event) => {
-    setExportAnchorEl(event.currentTarget);
-  };
-
-  const handleExportClose = () => {
-    setExportAnchorEl(null);
-  };
-
-  const exportToExcel = () => {
-    try {
-      handleExportClose();
-      const workbook = xlsxUtils.book_new();
-      
-      // Create worksheet for student data
-      const studentData = filteredStudents.map(student => ({
-        'Student Name': student.name,
-        'Batch': student.batch,
-        'Fees Month': format(parseISO(student.feesMonth), 'MMMM yyyy'),
-        'Amount': student.amount,
-        'Status': student.status
-      }));
-      const ws = xlsxUtils.json_to_sheet(studentData);
-      
-      // Add column widths
-      ws['!cols'] = [
-        { wch: 20 }, // Student Name
-        { wch: 10 }, // Batch
-        { wch: 15 }, // Fees Month
-        { wch: 15 }, // Amount
-        { wch: 10 }  // Status
-      ];
-      
-      xlsxUtils.book_append_sheet(workbook, ws, 'Students');
-
-      // Create worksheet for batch summary
-      const batchData = batchSummary.map(batch => ({
-        'Batch': batch.batch,
-        'Total Students': batch.totalStudents,
-        'Fees Collected': batch.feesCollected,
-        'Pending Amount': batch.pendingAmount,
-        'Collection Rate': `${Math.round(batch.collectionRate)}%`
-      }));
-      const batchWs = xlsxUtils.json_to_sheet(batchData);
-      
-      // Add column widths for batch summary
-      batchWs['!cols'] = [
-        { wch: 10 }, // Batch
-        { wch: 15 }, // Total Students
-        { wch: 15 }, // Fees Collected
-        { wch: 15 }, // Pending Amount
-        { wch: 15 }  // Collection Rate
-      ];
-      
-      xlsxUtils.book_append_sheet(workbook, batchWs, 'Batch Summary');
-
-      // Save the file
-      writeFile(workbook, 'fees_report.xlsx');
-      setSnackbar({
-        open: true,
-        message: 'Report exported to Excel successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error exporting to Excel:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to export to Excel. Please try again.',
-        severity: 'error'
-      });
-    }
-  };
-
-  const exportToPDF = () => {
-    try {
-      handleExportClose();
-      const doc = new jsPDF();
-      
-      // Add title and date
-      doc.setFontSize(18);
-      doc.text('Fees Collection Report', 14, 20);
-      doc.setFontSize(12);
-      doc.text(`Generated on ${format(new Date(), 'PPP')}`, 14, 30);
-
-      // Add batch summary
-      doc.setFontSize(14);
-      doc.text('Batch Summary', 14, 45);
-      
-      const batchData = batchSummary.map(batch => [
-        batch.batch,
-        batch.totalStudents.toString(),
-        formatCurrency(batch.feesCollected),
-        formatCurrency(batch.pendingAmount),
-        `${Math.round(batch.collectionRate)}%`
-      ]);
-
-      doc.autoTable({
-        startY: 50,
-        head: [['Batch', 'Total Students', 'Collected', 'Pending', 'Collection Rate']],
-        body: batchData,
-        theme: 'grid',
-        headStyles: { fillColor: [25, 118, 210] }
-      });
-
-      // Add student details
-      doc.setFontSize(14);
-      doc.text('Student Details', 14, doc.autoTable.previous.finalY + 15);
-
-      const studentData = filteredStudents.map(student => [
-        student.name,
-        student.batch,
-        format(parseISO(student.feesMonth), 'MMM yyyy'),
-        formatCurrency(student.amount),
-        student.status
-      ]);
-
-      doc.autoTable({
-        startY: doc.autoTable.previous.finalY + 20,
-        head: [['Name', 'Batch', 'Month', 'Amount', 'Status']],
-        body: studentData,
-        theme: 'grid',
-        headStyles: { fillColor: [25, 118, 210] }
-      });
-
-      // Save the PDF
-      doc.save('fees_report.pdf');
-      setSnackbar({
-        open: true,
-        message: 'Report exported to PDF successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error exporting to PDF:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to export to PDF. Please try again.',
-        severity: 'error'
-      });
-    }
-  };
-
-  const handleDeleteClick = (student) => {
-    setStudentToDelete(student);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (studentToDelete) {
-      handleDeleteStudent(studentToDelete);
-    }
-    setDeleteDialogOpen(false);
-    setStudentToDelete(null);
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setStudentToDelete(null);
-  };
+  if (error) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <>
+    <Box sx={{ p: 3 }}>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <TextField
             fullWidth
-            variant="outlined"
-            placeholder="Search by student name..."
+            label="Search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             InputProps={{
@@ -1568,271 +1658,386 @@ const DetailedView = React.memo(({
             }}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} md={3}>
           <FormControl fullWidth>
-            <InputLabel>Batch</InputLabel>
+            <InputLabel>Filter by Batch</InputLabel>
             <Select
               value={selectedBatch}
-              label="Batch"
               onChange={(e) => setSelectedBatch(e.target.value)}
+              label="Filter by Batch"
             >
-              <MenuItem value="all">All Batches</MenuItem>
               {uniqueBatches.map((batch) => (
                 <MenuItem key={batch} value={batch}>
-                  {batch}
+                  {batch === 'all' ? 'All Batches' : batch}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} md={3}>
           <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
+            <InputLabel>Filter by Month</InputLabel>
             <Select
-              value={selectedStatus}
-              label="Status"
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              label="Filter by Month"
             >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="Paid">Paid</MenuItem>
-              <MenuItem value="Unpaid">Unpaid</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <FormControl fullWidth>
-            <InputLabel>Month</InputLabel>
-            <Select
-              value={showAllMonths ? 'all' : selectedMonth}
-              label="Month"
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === 'all') {
-                  setShowAllMonths(true);
-                } else {
-                  setShowAllMonths(false);
-                  setSelectedMonth(value);
-                }
-              }}
-            >
-              <MenuItem value="all">All Months</MenuItem>
-              {availableMonths.map((month) => (
+              {uniqueMonths.map((month) => (
                 <MenuItem key={month} value={month}>
-                  {format(parseISO(`${month}-01`), 'MMMM yyyy')}
+                  {month === 'all' ? 'All Months' : format(parseISO(month), 'MMMM yyyy')}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6} md={2}>
-          <Button
-            fullWidth
-            variant="contained"
-            color="primary"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExportClick}
-            sx={{ height: '56px' }}
-          >
-            Export
-          </Button>
+        <Grid item xs={12} md={3}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenAddDialog(true)}
+              sx={{ mr: 1 }}
+            >
+              Add Fee
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={() => handleExport('excel')}
+            >
+              Export Excel
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownloadIcon />}
+              onClick={() => handleExport('pdf')}
+            >
+              Export PDF
+            </Button>
+          </Box>
         </Grid>
       </Grid>
 
-      <Fab 
-        color="primary" 
-        sx={{ 
-          position: 'fixed', 
-          bottom: 16, 
-          right: 16 
-        }}
-        onClick={() => setOpenAddDialog(true)}
-        aria-label="add student"
-      >
-        <AddIcon />
-      </Fab>
-
       <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 650 }} aria-label="fees table">
+        <Table>
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'name'}
-                  direction={orderBy === 'name' ? order : 'asc'}
-                  onClick={() => handleSort('name')}
-                >
-                  Student Name
-                </TableSortLabel>
+            <TableRow>
+              <TableCell onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
+                Student Name {sortField === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'batch'}
-                  direction={orderBy === 'batch' ? order : 'asc'}
-                  onClick={() => handleSort('batch')}
-                >
-                  Batch
-                </TableSortLabel>
+              <TableCell onClick={() => handleSort('batch')} style={{ cursor: 'pointer' }}>
+                Batch {sortField === 'batch' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'feesMonth'}
-                  direction={orderBy === 'feesMonth' ? order : 'asc'}
-                  onClick={() => handleSort('feesMonth')}
-                >
-                  Month
-                </TableSortLabel>
+              <TableCell onClick={() => handleSort('feesMonth')} style={{ cursor: 'pointer' }}>
+                Fees Month {sortField === 'feesMonth' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'amount'}
-                  direction={orderBy === 'amount' ? order : 'asc'}
-                  onClick={() => handleSort('amount')}
-                >
-                  Fees Amount
-                </TableSortLabel>
+              <TableCell onClick={() => handleSort('amount')} style={{ cursor: 'pointer' }}>
+                Amount {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'status'}
-                  direction={orderBy === 'status' ? order : 'asc'}
-                  onClick={() => handleSort('status')}
-                >
-                  Status
-                </TableSortLabel>
+              <TableCell onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>
+                Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
-              <TableCell align="center">Actions</TableCell>
+              <TableCell onClick={() => handleSort('paymentDate')} style={{ cursor: 'pointer' }}>
+                Payment Date {sortField === 'paymentDate' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('paymentMode')} style={{ cursor: 'pointer' }}>
+                Payment Mode {sortField === 'paymentMode' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {displayedStudents.map((student) => (
-              <TableRow
-                key={student.id}
-                sx={getRowStyle(student.status, student.feesMonth)}
-              >
-                <TableCell>{student.name}</TableCell>
-                <TableCell>{student.batch}</TableCell>
-                <TableCell>{format(parseISO(student.feesMonth), 'MMMM yyyy')}</TableCell>
-                <TableCell>{formatCurrency(student.amount)}</TableCell>
+            {filteredFees.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center">
+                  No fee records found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredFees.map((fee) => (
+                <TableRow key={`${fee.studentId}-${fee.feesMonth}`}>
+                  <TableCell>{fee.Student?.name || ''}</TableCell>
+                  <TableCell>{getBatchName(fee.Student)}</TableCell>
+                  <TableCell>{fee.feesMonth || ''}</TableCell>
+                  <TableCell>₹{fee.amount || 0}</TableCell>
                 <TableCell>
                   <Chip 
-                    label={student.status}
-                    color={student.status === 'Paid' ? 'success' : 'error'}
+                      label={fee.status || 'Unpaid'}
+                      color={fee.status === 'Paid' ? 'success' : 'error'}
                     size="small"
                   />
                 </TableCell>
-                <TableCell align="center">
-                  <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                    <Tooltip title="Edit">
+                  <TableCell>{fee.paymentDate || '-'}</TableCell>
+                  <TableCell>{fee.paymentMode || '-'}</TableCell>
+                  <TableCell>
                       <IconButton 
                         size="small" 
-                        onClick={() => {
-                          setSelectedStudent(student);
-                          setOpenEditDialog(true);
-                        }}
+                      onClick={() => handleEditClick(fee)}
+                      sx={{ mr: 1 }}
                       >
                         <EditIcon />
                       </IconButton>
-                    </Tooltip>
-                    {student.status === 'Unpaid' && (
-                      <Tooltip title="Mark as Paid">
+                    {fee.status !== 'Paid' && (
                         <IconButton 
                           size="small"
+                        onClick={() => handleMarkAsPaid(fee)}
                           color="success"
-                          onClick={() => handleMarkAsPaid(student)}
+                        sx={{ mr: 1 }}
                         >
                           <CheckCircleIcon />
                         </IconButton>
-                      </Tooltip>
                     )}
-                    <Tooltip title="Delete">
-                      <IconButton 
-                        size="small" 
-                        color="error"
-                        onClick={() => handleDeleteClick(student)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        setSelectedFee(fee);
+                        setOpenDeleteDialog(true);
+                      }}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                 </TableCell>
               </TableRow>
-            ))}
-            {displayedStudents.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                  <Typography variant="body1" color="text.secondary">
-                    No students found matching your search criteria
-                  </Typography>
-                </TableCell>
-              </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      <Menu
-        anchorEl={exportAnchorEl}
-        open={Boolean(exportAnchorEl)}
-        onClose={handleExportClose}
-      >
-        <MenuItem onClick={exportToExcel}>
-          <ListItemIcon>
-            <TableChartIcon />
-          </ListItemIcon>
-          Export to Excel
+      {/* Add Fee Dialog */}
+      <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Fee Record</DialogTitle>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          handleAddFee(newFee);
+        }}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Student</InputLabel>
+                  <Select
+                    value={newFee.studentId}
+                    onChange={(e) => setNewFee(prev => ({ ...prev, studentId: e.target.value }))}
+                    label="Student"
+                    required
+                  >
+                    {students.map((student) => (
+                      <MenuItem key={student.id} value={student.id}>
+                        {student.name} - {student.batch?.name || student.batch}
         </MenuItem>
-        <MenuItem onClick={exportToPDF}>
-          <ListItemIcon>
-            <PictureAsPdfOutlined />
-          </ListItemIcon>
-          Export to PDF
-        </MenuItem>
-      </Menu>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Fees Month"
+                  name="feesMonth"
+                  type="month"
+                  value={newFee.feesMonth}
+                  onChange={(e) => setNewFee(prev => ({ ...prev, feesMonth: e.target.value }))}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Amount"
+                  name="amount"
+                  type="number"
+                  value={newFee.amount}
+                  onChange={(e) => setNewFee(prev => ({ ...prev, amount: e.target.value }))}
+                  required
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    name="status"
+                    value={newFee.status}
+                    onChange={(e) => setNewFee(prev => ({ ...prev, status: e.target.value }))}
+                    label="Status"
+                  >
+                    <MenuItem value="Paid">Paid</MenuItem>
+                    <MenuItem value="Unpaid">Unpaid</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              {newFee.status === 'Paid' && (
+                <>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Payment Date"
+                      name="paymentDate"
+                      type="date"
+                      value={newFee.paymentDate}
+                      onChange={(e) => setNewFee(prev => ({ ...prev, paymentDate: e.target.value }))}
+                      required
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth>
+                      <InputLabel>Payment Mode</InputLabel>
+                      <Select
+                        name="paymentMode"
+                        value={newFee.paymentMode}
+                        onChange={(e) => setNewFee(prev => ({ ...prev, paymentMode: e.target.value }))}
+                        label="Payment Mode"
+                      >
+                        <MenuItem value="Cash">Cash</MenuItem>
+                        <MenuItem value="UPI">UPI</MenuItem>
+                        <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
+                        <MenuItem value="Cheque">Cheque</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </>
+              )}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenAddDialog(false)}>Cancel</Button>
+            <Button type="submit" variant="contained" color="primary">
+              Add Fee
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
 
-      {/* Add Delete Confirmation Dialog */}
+      {/* Edit Fee Dialog */}
+      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Fee Record</DialogTitle>
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          handleEditFee(newFee);
+        }}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Student: {selectedFee?.Student?.name || 'N/A'}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  Batch: {getBatchName(selectedFee?.Student)}
+                </Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Fees Month"
+                  name="feesMonth"
+                  type="month"
+                  value={newFee.feesMonth}
+                  onChange={(e) => setNewFee(prev => ({ ...prev, feesMonth: e.target.value }))}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Amount"
+                  name="amount"
+                  type="number"
+                  value={newFee.amount}
+                  onChange={(e) => setNewFee(prev => ({ ...prev, amount: e.target.value }))}
+                  required
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    name="status"
+                    value={newFee.status}
+                    onChange={(e) => setNewFee(prev => ({ ...prev, status: e.target.value }))}
+                    label="Status"
+                  >
+                    <MenuItem value="Paid">Paid</MenuItem>
+                    <MenuItem value="Unpaid">Unpaid</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              {newFee.status === 'Paid' && (
+                <>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Payment Date"
+                      name="paymentDate"
+                      type="date"
+                      value={newFee.paymentDate}
+                      onChange={(e) => setNewFee(prev => ({ ...prev, paymentDate: e.target.value }))}
+                      required
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth>
+                      <InputLabel>Payment Mode</InputLabel>
+                      <Select
+                        name="paymentMode"
+                        value={newFee.paymentMode}
+                        onChange={(e) => setNewFee(prev => ({ ...prev, paymentMode: e.target.value }))}
+                        label="Payment Mode"
+                      >
+                        <MenuItem value="Cash">Cash</MenuItem>
+                        <MenuItem value="UPI">UPI</MenuItem>
+                        <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
+                        <MenuItem value="Cheque">Cheque</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </>
+              )}
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
+            <Button type="submit" variant="contained" color="primary">
+              Update Fee
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
       <Dialog
-        open={deleteDialogOpen}
-        onClose={handleDeleteCancel}
+        open={openDeleteDialog}
+        onClose={() => setOpenDeleteDialog(false)}
         aria-labelledby="delete-dialog-title"
         aria-describedby="delete-dialog-description"
       >
-        <DialogTitle id="delete-dialog-title" sx={{ color: 'error.main' }}>
+        <DialogTitle id="delete-dialog-title">
           Confirm Delete
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete {studentToDelete?.name}'s record? This action cannot be undone.
+            Are you sure you want to delete the fee record for {selectedFee?.Student?.name} for the month of {selectedFee?.feesMonth}?
+            This action cannot be undone.
           </DialogContentText>
-          {studentToDelete && (
-            <Box sx={{ mt: 2, bgcolor: 'grey.100', p: 2, borderRadius: 1 }}>
-              <Typography variant="body2" gutterBottom>
-                <strong>Student Name:</strong> {studentToDelete.name}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Batch:</strong> {studentToDelete.batch}
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                <strong>Month:</strong> {format(parseISO(studentToDelete.feesMonth), 'MMMM yyyy')}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Status:</strong> {studentToDelete.status}
-              </Typography>
-            </Box>
-          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteCancel}>Cancel</Button>
-          <Button 
-            onClick={handleDeleteConfirm} 
-            color="error" 
-            variant="contained"
-            startIcon={<DeleteIcon />}
-          >
+          <Button onClick={() => setOpenDeleteDialog(false)}>Cancel</Button>
+          <Button onClick={handleDeleteFee} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Box>
   );
 });
 
@@ -2230,7 +2435,9 @@ const FeesDashboard = ({ initialTab }) => {
     let filtered = [...students];
     
     if (selectedBatch !== 'all') {
-      filtered = filtered.filter(student => student.batch === selectedBatch);
+      filtered = filtered.filter(student => 
+        (student.batch?.name || student.batch) === selectedBatch
+      );
     }
     
     if (selectedStatus !== 'all') {
@@ -2255,25 +2462,23 @@ const FeesDashboard = ({ initialTab }) => {
       let compareResult = 0;
       
       if (orderBy === 'feesMonth') {
-        // For dates, we want the most recent dates first by default
         compareResult = isAfter(parseISO(a.feesMonth), parseISO(b.feesMonth)) ? -1 : 1;
       } else {
-        // For other fields, first sort by date (most recent first)
         const dateCompare = isAfter(parseISO(a.feesMonth), parseISO(b.feesMonth)) ? -1 : 1;
         
-        // Then apply the selected sort
         let fieldCompare = 0;
         if (orderBy === 'name') {
           fieldCompare = a.name.localeCompare(b.name);
         } else if (orderBy === 'batch') {
-          fieldCompare = a.batch.localeCompare(b.batch);
+          const batchA = a.batch?.name || a.batch || '';
+          const batchB = b.batch?.name || b.batch || '';
+          fieldCompare = batchA.localeCompare(batchB);
         } else if (orderBy === 'amount') {
           fieldCompare = a.amount - b.amount;
         } else if (orderBy === 'status') {
           fieldCompare = a.status.localeCompare(b.status);
         }
         
-        // Use the field comparison first, then date as secondary sort
         compareResult = fieldCompare || dateCompare;
       }
       
@@ -2339,79 +2544,36 @@ const FeesDashboard = ({ initialTab }) => {
   }, [sessionTimeout, navigate]);
 
   // Handlers for student management
-  const handleAddStudent = async () => {
+  const handleAddStudent = async (studentData) => {
     try {
-      if (!newStudent.name || !newStudent.batch || !newStudent.feesMonth || !newStudent.amount) {
-        setSnackbar({ 
-          open: true, 
-          message: 'Please fill in all required fields', 
-          severity: 'error' 
-        });
-        return;
-      }
-
-      // Generate a unique ID using timestamp and random string
-      const timestamp = new Date().getTime();
-      const randomStr = Math.random().toString(36).substring(2, 8);
-      const uniqueId = `${timestamp}-${randomStr}`;
-
-      // Create a new student object with the correct format
-      const studentData = {
-        id: uniqueId,
-        name: newStudent.name,
-        batch: newStudent.batch,
-        feesMonth: newStudent.feesMonth,
-        amount: parseFloat(newStudent.amount),
-        status: newStudent.status || 'Unpaid'
-      };
-
-      console.log('Adding new student:', studentData);
-      const addedStudent = await api.addStudent(studentData);
-      console.log('Student added successfully:', addedStudent);
-
-      // Refresh students data
+      await api.addStudent(studentData);
       const updatedStudents = await api.getStudents();
       setStudents(updatedStudents);
-      
-      // Reset form and close dialog
-      setNewStudent({
-        name: '',
-        batch: '',
-        feesMonth: format(new Date(), 'yyyy-MM-dd'),
-        amount: '',
-        status: 'Unpaid'
-      });
-      setOpenAddDialog(false);
-      
-      setSnackbar({ 
-        open: true, 
-        message: 'Student added successfully', 
-        severity: 'success' 
-      });
+      setSnackbar({ open: true, message: 'Student added successfully', severity: 'success' });
     } catch (error) {
-      console.error('Error adding student:', error);
-      setSnackbar({ 
-        open: true, 
-        message: `Failed to add student: ${error.response?.data?.message || error.message}`, 
-        severity: 'error' 
-      });
+      setSnackbar({ open: true, message: 'Failed to add student', severity: 'error' });
     }
   };
 
-  const handleUpdateStudent = async () => {
+  const handleUpdateStudent = async (studentId, formData) => {
     try {
-      if (!selectedStudent) {
-        setSnackbar({ open: true, message: 'No student selected for update', severity: 'error' });
-        return;
-      }
-      await api.updateStudent(selectedStudent.id, editStudent);
-      // Refresh students data
+      const updatedFeeData = {
+        feesMonth: formData.feesMonth,
+        amount: Number(formData.amount) || 0,
+        status: formData.status,
+        paymentDate: formData.status === 'Paid' ? formData.paymentDate : null,
+        paymentMode: formData.status === 'Paid' ? formData.paymentMode : null
+      };
+
+      await api.updateFees(studentId, updatedFeeData);
       const updatedStudents = await api.getStudents();
       setStudents(updatedStudents);
-      setOpenEditDialog(false);
-      setSnackbar({ open: true, message: 'Student updated successfully', severity: 'success' });
+      setSelectedStudent(null);
+      setSnackbar({ open: true, message: 'Fee details updated successfully', severity: 'success' });
     } catch (error) {
-      setSnackbar({ open: true, message: 'Failed to update student', severity: 'error' });
+      console.error('Error updating fee details:', error);
+      setSnackbar({ open: true, message: 'Failed to update fee details', severity: 'error' });
+      throw error;
     }
   };
 
@@ -2419,32 +2581,35 @@ const FeesDashboard = ({ initialTab }) => {
   useEffect(() => {
     if (selectedStudent) {
       setEditStudent({
-        name: selectedStudent.name,
-        batch: selectedStudent.batch,
-        feesMonth: selectedStudent.feesMonth,
-        amount: selectedStudent.amount.toString(),
-        status: selectedStudent.status
+        name: selectedStudent.name || '',
+        batch: selectedStudent.batch || '',
+        feesMonth: selectedStudent.feesMonth || format(new Date(), 'yyyy-MM'),
+        amount: selectedStudent.amount ? String(selectedStudent.amount) : '',
+        status: selectedStudent.status || 'Unpaid',
+        paymentDate: selectedStudent.paymentDate || format(new Date(), 'yyyy-MM-dd'),
+        paymentMode: selectedStudent.paymentMode || 'Cash'
       });
     }
   }, [selectedStudent]);
 
-  const handleMarkAsPaid = async (student) => {
+  const handleMarkAsPaid = async (fee) => {
     try {
-      await api.markAsPaid(student.id);
+      const updatedFeeData = {
+        feesMonth: fee.feesMonth,
+        amount: fee.amount,
+        status: 'Paid',
+        paymentDate: format(new Date(), 'yyyy-MM-dd'),
+        paymentMode: 'Cash'
+      };
+      
+      await api.updateFees(fee.studentId, updatedFeeData);
       // Refresh students data
       const updatedStudents = await api.getStudents();
       setStudents(updatedStudents);
-      setSnackbar({ 
-        open: true, 
-        message: `${student.name}'s payment has been marked as paid`, 
-        severity: 'success' 
-      });
+      setSnackbar({ open: true, message: 'Fee marked as paid successfully', severity: 'success' });
     } catch (error) {
-      setSnackbar({ 
-        open: true, 
-        message: 'Failed to update payment status', 
-        severity: 'error' 
-      });
+      console.error('Error marking fee as paid:', error);
+      setSnackbar({ open: true, message: 'Failed to mark fee as paid', severity: 'error' });
     }
   };
 
@@ -2476,13 +2641,14 @@ const FeesDashboard = ({ initialTab }) => {
 
   // Derived data
   const uniqueBatches = useMemo(() => 
-    Array.from(new Set(students.map(student => student.batch))).sort(),
+    Array.from(new Set(students.map(student => student.batch?.name || student.batch))).filter(Boolean).sort(),
     [students]
   );
   const uniqueMonths = useMemo(() => 
-    Array.from(new Set(students.map(student => 
-      format(parseISO(student.feesMonth), 'MMMM yyyy')
-    ))).sort(),
+    Array.from(new Set(students
+      .filter(student => isValidDateString(student.feesMonth))
+      .map(student => format(parseISO(student.feesMonth), 'MMMM yyyy'))
+    )).sort(),
     [students]
   );
 
@@ -2525,6 +2691,18 @@ const FeesDashboard = ({ initialTab }) => {
               </ListItemIcon>
               <ListItemText primary="Visualizations" />
             </ListItem>
+            <ListItem button selected={selectedTab === 3} onClick={() => setSelectedTab(3)}>
+              <ListItemIcon>
+                <PeopleIcon />
+              </ListItemIcon>
+              <ListItemText primary="Students" />
+            </ListItem>
+            <ListItem button selected={selectedTab === 4} onClick={() => setSelectedTab(4)}>
+              <ListItemIcon>
+                <GroupWorkIcon />
+              </ListItemIcon>
+              <ListItemText primary="Batches" />
+            </ListItem>
           </>
         )}
         <ListItem button selected={selectedTab === 2} onClick={() => setSelectedTab(2)}>
@@ -2559,24 +2737,12 @@ const FeesDashboard = ({ initialTab }) => {
         return (
           <Box sx={{ p: 2 }}>
             <DetailedView 
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              selectedBatch={selectedBatch}
-              setSelectedBatch={setSelectedBatch}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-              uniqueBatches={uniqueBatches}
-              filteredStudents={filteredStudents}
-              orderBy={orderBy}
-              order={order}
-              handleSort={handleSort}
-              getRowStyle={getRowStyle}
-              handleMarkAsPaid={handleMarkAsPaid}
-              handleDeleteStudent={handleDeleteStudent}
-              setOpenAddDialog={setOpenAddDialog}
-              setSelectedStudent={setSelectedStudent}
-              setOpenEditDialog={setOpenEditDialog}
-              batchSummary={batchSummary}
+              students={students}
+              onEdit={(fee) => {
+                setSelectedStudent(fee);
+                setOpenEditDialog(true);
+              }}
+              onMarkAsPaid={handleMarkAsPaid}
             />
           </Box>
         );
@@ -2603,6 +2769,18 @@ const FeesDashboard = ({ initialTab }) => {
               isLoadingAttendance={isLoadingAttendance}
               setIsLoadingAttendance={setIsLoadingAttendance}
             />
+          </Box>
+        );
+      case 3:
+        return (
+          <Box sx={{ p: 2 }}>
+            <StudentsView />
+          </Box>
+        );
+      case 4:
+        return (
+          <Box sx={{ p: 2 }}>
+            <BatchesView />
           </Box>
         );
       default:
@@ -2790,18 +2968,14 @@ const FeesDashboard = ({ initialTab }) => {
         open={openAddDialog}
         onClose={() => setOpenAddDialog(false)}
         onAdd={handleAddStudent}
-        uniqueBatches={uniqueBatches}
-        newStudent={newStudent}
-        onInputChange={(e) => setNewStudent(prev => ({ ...prev, [e.target.name]: e.target.value }))}
       />
 
       <EditStudentDialog
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
-        onUpdate={handleUpdateStudent}
+        onEdit={handleUpdateStudent}
+        student={selectedStudent}
         uniqueBatches={uniqueBatches}
-        editStudent={editStudent}
-        onInputChange={(e) => setEditStudent(prev => ({ ...prev, [e.target.name]: e.target.value }))}
       />
 
       <Snackbar

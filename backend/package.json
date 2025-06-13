@@ -9,6 +9,10 @@
     "seed": "node src/scripts/seed.js"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/system": "^7.1.0",
+    "@mui/x-date-pickers": "^8.4.0",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "dotenv": "^16.0.3",

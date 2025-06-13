@@ -1,25 +1,17 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const Student = sequelize.define('Student', {
+const Batch = sequelize.define('Batch', {
   id: {
-    type: DataTypes.STRING,
-    primaryKey: true,
-    allowNull: false
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
   name: {
     type: DataTypes.STRING,
     allowNull: false
   },
-  batchId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'Batches',
-      key: 'id'
-    }
-  },
-  contact: {
+  timings: {
     type: DataTypes.STRING,
     allowNull: true
   },
@@ -33,4 +25,4 @@ const Student = sequelize.define('Student', {
   }
 });
 
-module.exports = Student; 
+module.exports = Batch; 

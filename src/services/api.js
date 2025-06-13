@@ -17,7 +17,11 @@ const api = {
   // Add new student
   addStudent: async (studentData) => {
     try {
-      const response = await axios.post(`${API_URL}/students`, studentData);
+      const response = await axios.post(`${API_URL}/students`, {
+        ...studentData,
+        paymentDate: studentData.status === 'Paid' ? studentData.paymentDate : null,
+        paymentMode: studentData.status === 'Paid' ? studentData.paymentMode : null
+      });
       return response.data;
     } catch (error) {
       console.error('Error adding student:', error);
@@ -28,7 +32,11 @@ const api = {
   // Update student
   updateStudent: async (id, studentData) => {
     try {
-      const response = await axios.put(`${API_URL}/students/${id}`, studentData);
+      const response = await axios.put(`${API_URL}/students/${id}`, {
+        ...studentData,
+        paymentDate: studentData.status === 'Paid' ? studentData.paymentDate : null,
+        paymentMode: studentData.status === 'Paid' ? studentData.paymentMode : null
+      });
       return response.data;
     } catch (error) {
       console.error('Error updating student:', error);
@@ -93,6 +101,141 @@ const api = {
         response: error.response?.data,
         status: error.response?.status
       });
+      throw error;
+    }
+  },
+
+  // Get all batches
+  getBatches: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/batches`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching batches:', error);
+      throw error;
+    }
+  },
+
+  // Add new batch
+  addBatch: async (batchData) => {
+    try {
+      const response = await axios.post(`${API_URL}/batches`, batchData);
+      return response.data;
+    } catch (error) {
+      console.error('Error adding batch:', error);
+      throw error;
+    }
+  },
+
+  // Update batch
+  updateBatch: async (id, batchData) => {
+    try {
+      const response = await axios.put(`${API_URL}/batches/${id}`, batchData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating batch:', error);
+      throw error;
+    }
+  },
+
+  // Delete batch
+  deleteBatch: async (id) => {
+    try {
+      await axios.delete(`${API_URL}/batches/${id}`);
+    } catch (error) {
+      console.error('Error deleting batch:', error);
+      throw error;
+    }
+  },
+
+  // Fee-related methods
+  // Get all fees
+  getFees: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/fees`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching fees:', error);
+      throw error;
+    }
+  },
+
+  // Add new fee record
+  addFee: async (feeData) => {
+    try {
+      const response = await axios.post(`${API_URL}/fees`, {
+        studentId: feeData.studentId,
+        feesMonth: feeData.feesMonth,
+        amount: feeData.amount,
+        status: feeData.status,
+        paymentDate: feeData.status === 'Paid' ? feeData.paymentDate : null,
+        paymentMode: feeData.status === 'Paid' ? feeData.paymentMode : null
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error adding fee:', error);
+      throw error;
+    }
+  },
+
+  // Update fee record
+  updateFees: async (studentId, feeData) => {
+    try {
+      const response = await axios.put(`${API_URL}/fees/${studentId}`, {
+        feesMonth: feeData.feesMonth,
+        amount: feeData.amount,
+        status: feeData.status,
+        paymentDate: feeData.status === 'Paid' ? feeData.paymentDate : null,
+        paymentMode: feeData.status === 'Paid' ? feeData.paymentMode : null
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating fee:', error);
+      throw error;
+    }
+  },
+
+  // Delete fee record
+  deleteFee: async (studentId, feesMonth) => {
+    try {
+      await axios.delete(`${API_URL}/fees/${studentId}`, {
+        params: { feesMonth }
+      });
+    } catch (error) {
+      console.error('Error deleting fee:', error);
+      throw error;
+    }
+  },
+
+  // Get fees for a specific student
+  getStudentFees: async (studentId) => {
+    try {
+      const response = await axios.get(`${API_URL}/fees/student/${studentId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching student fees:', error);
+      throw error;
+    }
+  },
+
+  // Get fees for a specific month
+  getMonthlyFees: async (month) => {
+    try {
+      const response = await axios.get(`${API_URL}/fees/month/${month}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching monthly fees:', error);
+      throw error;
+    }
+  },
+
+  // Get fees for a specific batch
+  getBatchFees: async (batchId) => {
+    try {
+      const response = await axios.get(`${API_URL}/fees/batch/${batchId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching batch fees:', error);
       throw error;
     }
   }
