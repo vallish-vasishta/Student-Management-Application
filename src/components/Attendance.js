@@ -28,9 +28,10 @@ const Attendance = () => {
   console.log('Rendering Attendance component');
   
   const [students, setStudents] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [selectedDate, setSelectedDate] = useState(dayjs());
-  const [selectedBatch, setSelectedBatch] = useState('');
-  const [attendance, setAttendance] = useState([]);
+  const [selectedBatch, setSelectedBatch] = useState('all');
+  const [attendance, setAttendance] = useState({});
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,25 +44,17 @@ const Attendance = () => {
     }
   }, []);
 
-  const fetchAttendance = useCallback(async () => {
-    if (!selectedBatch || !selectedDate) return;
-    
-    setIsLoading(true);
+  const fetchBatches = useCallback(async () => {
     try {
-      const data = await api.getAttendance(
-        selectedDate.format('YYYY-MM-DD'),
-        selectedBatch
-      );
-      setAttendance(data);
+      const data = await api.getBatches();
+      setBatches(data);
     } catch (error) {
-      showSnackbar('Failed to fetch attendance: ' + (error.response?.data?.error || error.message), 'error');
-    } finally {
-      setIsLoading(false);
+      showSnackbar('Failed to fetch batches: ' + (error.response?.data?.error || error.message), 'error');
     }
-  }, [selectedBatch, selectedDate]);
+  }, []);
 
   const handleMarkAttendance = useCallback(async (studentId, status) => {
-    if (!studentId || !status || !selectedBatch || !selectedDate) {
+    if (!studentId || !status || !selectedDate) {
       showSnackbar('Missing required data for marking attendance', 'error');
       return;
     }
@@ -70,19 +63,23 @@ const Attendance = () => {
     try {
       const records = [{
         studentId,
-        status,
-        batch: selectedBatch
+        status
       }];
 
       await api.markAttendance(selectedDate.format('YYYY-MM-DD'), records);
       showSnackbar('Attendance marked successfully', 'success');
-      await fetchAttendance();
+      
+      // Update local attendance state
+      setAttendance(prev => ({
+        ...prev,
+        [studentId]: status
+      }));
     } catch (error) {
       showSnackbar('Failed to mark attendance: ' + (error.response?.data?.error || error.message), 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [selectedBatch, selectedDate, fetchAttendance]);
+  }, [selectedDate]);
 
   const showSnackbar = useCallback((message, severity) => {
     setSnackbar({ open: true, message, severity });
@@ -94,27 +91,28 @@ const Attendance = () => {
 
   useEffect(() => {
     fetchStudents();
-  }, [fetchStudents]);
-
-  useEffect(() => {
-    if (selectedBatch && selectedDate) {
-      fetchAttendance();
-    }
-  }, [selectedBatch, selectedDate, fetchAttendance]);
+    fetchBatches();
+  }, [fetchStudents, fetchBatches]);
 
   const getBatches = useCallback(() => {
-    const batches = [...new Set(students.map(student => student.batch))];
-    return batches.sort();
-  }, [students]);
+    return batches.sort((a, b) => a.name.localeCompare(b.name));
+  }, [batches]);
 
   const getStudentsByBatch = useCallback(() => {
-    return students.filter(student => student.batch === selectedBatch);
+    if (selectedBatch === 'all') {
+      return students;
+    }
+    return students.filter(student => student.batchId === parseInt(selectedBatch));
   }, [students, selectedBatch]);
 
   const getAttendanceStatus = useCallback((studentId) => {
-    const record = attendance.find(a => a.studentId === studentId);
-    return record ? record.status : 'absent';
+    return attendance[studentId] || 'absent';
   }, [attendance]);
+
+  const getBatchName = useCallback((batchId) => {
+    const batch = batches.find(b => b.id === batchId);
+    return batch ? batch.name : '';
+  }, [batches]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -131,9 +129,10 @@ const Attendance = () => {
             onChange={(e) => setSelectedBatch(e.target.value)}
             disabled={isLoading}
           >
+            <MenuItem value="all">All</MenuItem>
             {getBatches().map((batch) => (
-              <MenuItem key={batch} value={batch}>
-                {batch}
+              <MenuItem key={batch.id} value={batch.id}>
+                {batch.name}
               </MenuItem>
             ))}
           </Select>
@@ -164,7 +163,7 @@ const Attendance = () => {
               {getStudentsByBatch().map((student) => (
                 <TableRow key={student.id}>
                   <TableCell>{student.name}</TableCell>
-                  <TableCell>{student.batch}</TableCell>
+                  <TableCell>{getBatchName(student.batchId)}</TableCell>
                   <TableCell align="center">
                     {getAttendanceStatus(student.id)}
                   </TableCell>

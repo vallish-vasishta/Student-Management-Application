@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Table,
@@ -96,7 +96,8 @@ import {
   People as PeopleIcon,
   GroupWork as GroupWorkIcon,
   Pencil as PencilIcon,
-  Trash as TrashIcon
+  Trash as TrashIcon,
+  PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
 import { format, isPast, parseISO, isAfter, isBefore, subDays, addDays, startOfMonth } from 'date-fns';
 import { utils as xlsxUtils, writeFile } from 'xlsx';
@@ -120,6 +121,8 @@ import 'jspdf-autotable';
 import api from '../services/api';
 import StudentsView from './StudentsView';
 import BatchesView from './BatchesView';
+import CreateUser from './CreateUser';
+import ListUsers from './ListUsers';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
@@ -658,8 +661,8 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
 
   // Fetch attendance data when date changes
   useEffect(() => {
-    fetchAttendance(selectedDate, selectedBatch);
-  }, [selectedDate, selectedBatch, fetchAttendance]);
+    fetchAttendance(selectedDate, 'all');
+  }, [selectedDate, fetchAttendance]);
 
   const getAttendanceStats = (date = selectedDate, batch = selectedBatch) => {
     if (!date) {
@@ -668,7 +671,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
 
     const currentDateAttendance = attendanceData[date] || {};
     const filteredStudents = students.filter(s => 
-      batch === 'all' || s.batch === batch
+      selectedBatch === 'all' || s.batch === batch
     );
     
     const total = filteredStudents.length;
@@ -687,7 +690,8 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
   const stats = getAttendanceStats();
 
   const filteredStudents = students.filter(student => 
-    selectedBatch === 'all' || student.batch === selectedBatch
+    selectedBatch === 'all' ||
+    (student.batch?.name || student.batch) === selectedBatch
   );
 
   const handleExportClick = (event) => {
@@ -2065,14 +2069,16 @@ const VisualizationsView = React.memo(({
   const monthlyStats = useMemo(() => {
     const stats = {};
     availableMonths.forEach(month => {
-      const monthStudents = students.filter(student => 
-        format(parseISO(student.feesMonth), 'yyyy-MM') === month
-      );
+      // Since students don't have feesMonth anymore, we'll use current month for all students
+      const monthStudents = students.filter(student => {
+        // For now, include all students in current month since fees are separate
+        return true;
+      });
       
-      const totalAmount = monthStudents.reduce((sum, s) => sum + Number(s.amount), 0);
+      const totalAmount = monthStudents.reduce((sum, s) => sum + Number(s.amount || 0), 0);
       const collectedAmount = monthStudents
         .filter(s => s.status === 'Paid')
-        .reduce((sum, s) => sum + Number(s.amount), 0);
+        .reduce((sum, s) => sum + Number(s.amount || 0), 0);
       
       stats[month] = {
         total: monthStudents.length,
@@ -2088,10 +2094,18 @@ const VisualizationsView = React.memo(({
 
   const currentMetrics = useMemo(() => ({
     totalStudents: filteredStudents.length,
-    totalFees: filteredStudents.reduce((sum, student) => sum + Number(student.amount), 0),
-    overdueCount: filteredStudents.filter(student => 
-      student.status === 'Unpaid' && isPast(parseISO(student.feesMonth))
-    ).length,
+    totalFees: filteredStudents.reduce((sum, student) => sum + Number(student.amount || 0), 0),
+    overdueCount: filteredStudents.filter(student => {
+      // Check if student has unpaid status and if we can determine if it's overdue
+      if (student.status === 'Unpaid' && student.feesMonth) {
+        try {
+          return isPast(parseISO(student.feesMonth));
+        } catch (error) {
+          return false;
+        }
+      }
+      return false;
+    }).length,
     collectionRate: filteredStudents.length > 0 
       ? (filteredStudents.filter(s => s.status === 'Paid').length / filteredStudents.length) * 100 
       : 0
@@ -2100,17 +2114,14 @@ const VisualizationsView = React.memo(({
   const getMonthlyTrends = useCallback(() => {
     const monthlyData = {};
     
-    // Sort students by month
-    const sortedStudents = [...students].sort((a, b) => 
-      parseISO(b.feesMonth) - parseISO(a.feesMonth)
-    );
-
-    // Group by month
-    sortedStudents.forEach(student => {
-      const month = format(parseISO(student.feesMonth), 'MMMM yyyy');
-      if (!monthlyData[month]) {
-        monthlyData[month] = {
-          month,
+    // Since students don't have feesMonth, we'll create a simple trend based on current data
+    const currentMonth = format(new Date(), 'MMMM yyyy');
+    
+    // Group by current month for now
+    students.forEach(student => {
+      if (!monthlyData[currentMonth]) {
+        monthlyData[currentMonth] = {
+          month: currentMonth,
           totalFees: 0,
           collectedFees: 0,
           pendingFees: 0,
@@ -2119,19 +2130,19 @@ const VisualizationsView = React.memo(({
         };
       }
       
-      const amount = Number(student.amount);
-      monthlyData[month].totalFees += amount;
-      monthlyData[month].totalStudents += 1;
+      const studentAmount = Number(student.amount || 0);
+      monthlyData[currentMonth].totalFees += studentAmount;
+      monthlyData[currentMonth].totalStudents += 1;
       
       if (student.status === 'Paid') {
-        monthlyData[month].collectedFees += amount;
-        monthlyData[month].paidStudents += 1;
+        monthlyData[currentMonth].collectedFees += studentAmount;
+        monthlyData[currentMonth].paidStudents += 1;
       } else {
-        monthlyData[month].pendingFees += amount;
+        monthlyData[currentMonth].pendingFees += studentAmount;
       }
     });
 
-    // Convert to array and sort by date (oldest to newest for x-axis left to right)
+    // Convert to array and sort by date
     return Object.values(monthlyData)
       .sort((a, b) => new Date(a.month) - new Date(b.month))
       .slice(-parseInt(selectedTimeRange));
@@ -2414,12 +2425,15 @@ const FeesDashboard = ({ initialTab }) => {
     status: ''
   });
   const [openLogoutDialog, setOpenLogoutDialog] = useState(false);
-  const [sessionTimeout, setSessionTimeout] = useState(null);
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const [anchorElProfile, setAnchorElProfile] = useState(null);
+  const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
+  const [openListUsersDialog, setOpenListUsersDialog] = useState(false);
+  const sessionTimeoutRef = useRef(null);
+  const warningTimeoutRef = useRef(null);
 
   // Session timeout constants
-  const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000; // 30 minutes
+  const SESSION_TIMEOUT_DURATION = 2 * 60 * 60 * 1000; // 2 hours
   const SESSION_WARNING_TIME = 5 * 60 * 1000; // 5 minutes warning
 
   // Remove or modify the useEffect that sets up the reminder
@@ -2488,10 +2502,34 @@ const FeesDashboard = ({ initialTab }) => {
     setFilteredStudents(filtered);
   }, [students, searchQuery, selectedBatch, selectedStatus, selectedMonth, orderBy, order]);
 
-  // Session timeout effect
+  // Session timeout effect - Simplified version
   useEffect(() => {
+    // Check if user is authenticated before setting up session timeout
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    const userRole = localStorage.getItem('userRole');
+    const userName = localStorage.getItem('userName');
+    
+    if (!isAuthenticated || !userRole || !userName) {
+      return;
+    }
+
+    // Pause session timeout when user management dialogs are open
+    if (openCreateUserDialog || openListUsersDialog) {
+      return;
+    }
+
+    console.log('Setting up session timeout');
+    
     const handleSessionTimeout = () => {
+      const currentAuth = localStorage.getItem('isAuthenticated') === 'true';
+      if (!currentAuth) {
+        return;
+      }
+      
       localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userId');
       navigate('/');
       setSnackbar({
         open: true,
@@ -2501,27 +2539,34 @@ const FeesDashboard = ({ initialTab }) => {
     };
 
     const resetSessionTimeout = () => {
-      if (sessionTimeout) {
-        clearTimeout(sessionTimeout);
+      // Clear existing timeouts
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current);
       }
       
-      const warningTimeout = setTimeout(() => {
-        setShowSessionWarning(true);
+      // Set warning timeout
+      warningTimeoutRef.current = setTimeout(() => {
+        const currentAuth = localStorage.getItem('isAuthenticated') === 'true';
+        if (currentAuth) {
+          setShowSessionWarning(true);
+        }
       }, SESSION_TIMEOUT_DURATION - SESSION_WARNING_TIME);
 
-      const timeout = setTimeout(() => {
+      // Set session timeout
+      sessionTimeoutRef.current = setTimeout(() => {
         handleSessionTimeout();
       }, SESSION_TIMEOUT_DURATION);
-
-      setSessionTimeout(timeout);
-
-      return () => {
-        clearTimeout(warningTimeout);
-        clearTimeout(timeout);
-      };
     };
 
     const handleUserActivity = () => {
+      const currentAuth = localStorage.getItem('isAuthenticated') === 'true';
+      if (!currentAuth) {
+        return;
+      }
+      
       resetSessionTimeout();
       setShowSessionWarning(false);
     };
@@ -2531,17 +2576,23 @@ const FeesDashboard = ({ initialTab }) => {
       window.addEventListener(event, handleUserActivity);
     });
 
+    // Initialize timeout
     resetSessionTimeout();
 
     return () => {
-      if (sessionTimeout) {
-        clearTimeout(sessionTimeout);
+      // Cleanup timeouts
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
       }
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current);
+      }
+      // Remove event listeners
       events.forEach(event => {
         window.removeEventListener(event, handleUserActivity);
       });
     };
-  }, [sessionTimeout, navigate]);
+  }, [navigate, openCreateUserDialog, openListUsersDialog]);
 
   // Handlers for student management
   const handleAddStudent = async (studentData) => {
@@ -2813,24 +2864,54 @@ const FeesDashboard = ({ initialTab }) => {
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('userRole');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userId');
     navigate('/');
     setSnackbar({ open: true, message: 'Logged out successfully!', severity: 'success' });
   };
 
   const handleExtendSession = () => {
     setShowSessionWarning(false);
-    if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
+    // Reset the session timeout using the same logic as the main effect
+    if (sessionTimeoutRef.current) {
+      clearTimeout(sessionTimeoutRef.current);
     }
-    const newTimeout = setTimeout(() => {
+    if (warningTimeoutRef.current) {
+      clearTimeout(warningTimeoutRef.current);
+    }
+    
+    // Set warning timeout
+    warningTimeoutRef.current = setTimeout(() => {
       setShowSessionWarning(true);
-    }, 55 * 60 * 1000); // Show warning 5 minutes before session expires
-    setSessionTimeout(newTimeout);
+    }, SESSION_TIMEOUT_DURATION - SESSION_WARNING_TIME);
+
+    // Set session timeout
+    sessionTimeoutRef.current = setTimeout(() => {
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userId');
+      navigate('/');
+      setSnackbar({
+        open: true,
+        message: 'Session expired. Please log in again.',
+        severity: 'warning'
+      });
+    }, SESSION_TIMEOUT_DURATION);
   };
 
   const handleLogoutNow = () => {
     setShowSessionWarning(false);
     handleLogoutConfirm();
+  };
+
+  const handleCreateUserClick = () => {
+    handleProfileClose();
+    setOpenCreateUserDialog(true);
+  };
+
+  const handleListUsersClick = () => {
+    handleProfileClose();
+    setOpenListUsersDialog(true);
   };
 
   return (
@@ -2911,6 +2992,23 @@ const FeesDashboard = ({ initialTab }) => {
           </ListItemIcon>
           <ListItemText primary="Settings" />
         </MenuItem>
+        {userRole === 'admin' && (
+          <>
+            <Divider />
+            <MenuItem onClick={handleCreateUserClick}>
+              <ListItemIcon>
+                <PersonAddIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Create User" />
+            </MenuItem>
+            <MenuItem onClick={handleListUsersClick}>
+              <ListItemIcon>
+                <PeopleIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="List Users" />
+            </MenuItem>
+          </>
+        )}
         <Divider />
         <MenuItem onClick={handleLogoutClick}>
           <ListItemIcon>
@@ -3036,6 +3134,35 @@ const FeesDashboard = ({ initialTab }) => {
             Extend Session
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog
+        open={openCreateUserDialog}
+        onClose={() => setOpenCreateUserDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <CreateUser 
+            onClose={() => setOpenCreateUserDialog(false)}
+            onSuccess={() => setOpenCreateUserDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* List Users Dialog */}
+      <Dialog
+        open={openListUsersDialog}
+        onClose={() => setOpenListUsersDialog(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <ListUsers 
+            onClose={() => setOpenListUsersDialog(false)}
+          />
+        </DialogContent>
       </Dialog>
     </Box>
   );

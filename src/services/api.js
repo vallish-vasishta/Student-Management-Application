@@ -3,6 +3,50 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_BACKEND_HOST || 'http://localhost:5000/api';
 
 const api = {
+  // Login method
+  login: async (credentials) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/login`, credentials);
+      return response.data;
+    } catch (error) {
+      console.error('Error during login:', error);
+      throw error;
+    }
+  },
+
+  // Create new user (admin only)
+  createUser: async (userData) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/users`, userData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  },
+
+  // Get all users (admin only)
+  getUsers: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/auth/users`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+  },
+
+  // Delete user (admin only)
+  deleteUser: async (userId) => {
+    try {
+      const response = await axios.delete(`${API_URL}/auth/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  },
+
   // Get all students
   getStudents: async () => {
     try {

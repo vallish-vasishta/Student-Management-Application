@@ -1,6 +1,6 @@
 // 'use strict';
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/connection');
+const sequelize = require('../config/database');
 // const sequelize = require('../config/database');
 const Student = require('./Student');
 
@@ -29,7 +29,8 @@ const Attendance = sequelize.define('Attendance', {
     allowNull: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  tableName: 'Attendances'
 });
 
 // Define association with Student model

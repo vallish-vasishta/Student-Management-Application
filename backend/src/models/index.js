@@ -1,6 +1,7 @@
 const Student = require('./Student');
 const Attendance = require('./Attendance');
 const Batch = require('./Batch');
+const User = require('./User');
 const sequelize = require('../config/database');
 
 // Define associations
@@ -27,5 +28,6 @@ sequelize.sync();
 module.exports = {
   Student,
   Attendance,
-  Batch
+  Batch,
+  User
 }; 
