@@ -5,7 +5,7 @@ import {
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import api from '../services/api';
 
-const StudentsView = () => {
+const StudentsView = ({ onAddStudent }) => {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,9 +60,13 @@ const StudentsView = () => {
         await api.updateStudent(currentStudent.id, currentStudent);
         setSnackbar({ open: true, message: 'Student updated', severity: 'success' });
       } else {
-        // Generate a unique id for new student
-        const id = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-        await api.addStudent({ ...currentStudent, id });
+        // Use the handleAddStudent function from parent component to create fee records
+        if (onAddStudent) {
+          await onAddStudent(currentStudent);
+        } else {
+          // Fallback to direct API call if onAddStudent is not provided
+          await api.addStudent(currentStudent);
+        }
         setSnackbar({ open: true, message: 'Student added', severity: 'success' });
       }
       // Refresh list

@@ -75,7 +75,7 @@ const Login = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #F59E0B 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -88,12 +88,12 @@ const Login = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-          animation: 'float 20s ease-in-out infinite',
+          background: 'url("data:image/svg+xml,%3Csvg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.08"%3E%3Ccircle cx="40" cy="40" r="3"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+          animation: 'float 25s ease-in-out infinite',
         },
         '@keyframes float': {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-20px)' },
+          '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '50%': { transform: 'translateY(-30px) rotate(180deg)' },
         }
       }}
     >
@@ -121,26 +121,32 @@ const Login = () => {
           >
             <MusicNoteIcon 
               sx={{ 
-                fontSize: 48, 
+                fontSize: 56, 
                 mr: 2,
                 flexShrink: 0,
-                animation: 'pulse 2s ease-in-out infinite',
-                '@keyframes pulse': {
-                  '0%, 100%': { transform: 'scale(1)' },
-                  '50%': { transform: 'scale(1.1)' },
+                animation: 'dance 3s ease-in-out infinite',
+                '@keyframes dance': {
+                  '0%, 100%': { transform: 'scale(1) rotate(0deg)' },
+                  '25%': { transform: 'scale(1.1) rotate(-5deg)' },
+                  '50%': { transform: 'scale(1.2) rotate(0deg)' },
+                  '75%': { transform: 'scale(1.1) rotate(5deg)' },
                 }
               }} 
             />
             <Typography 
-              variant="h3" 
+              variant="h2" 
               component="h1" 
               sx={{ 
-                fontWeight: 700,
-                textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-                letterSpacing: '0.1em',
+                fontWeight: 800,
+                textShadow: '3px 3px 6px rgba(0,0,0,0.4)',
+                letterSpacing: '0.05em',
                 whiteSpace: 'nowrap',
                 textAlign: 'center',
-                lineHeight: 1.2,
+                lineHeight: 1.1,
+                background: 'linear-gradient(45deg, #FFFFFF, #FBBF24)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
               }}
             >
               Shadows Dance Studio
@@ -153,12 +159,17 @@ const Login = () => {
             sx={{ 
               padding: 4, 
               width: '100%',
-              maxWidth: 450,
-              borderRadius: 3,
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+              maxWidth: 480,
+              borderRadius: 4,
+              background: 'rgba(255, 255, 255, 0.98)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 20px 60px rgba(139, 92, 246, 0.2)',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 30px 80px rgba(139, 92, 246, 0.3)',
+                transition: 'all 0.3s ease-in-out',
+              },
             }}
           >
             <Typography 
@@ -167,15 +178,15 @@ const Login = () => {
               align="center" 
               sx={{ 
                 mb: 3,
-                fontWeight: 600,
-                color: '#333',
+                fontWeight: 700,
+                color: '#1F2937',
                 '&::after': {
                   content: '""',
                   display: 'block',
-                  width: '60px',
-                  height: '3px',
-                  background: 'linear-gradient(90deg, #667eea, #764ba2)',
-                  margin: '16px auto 0',
+                  width: '80px',
+                  height: '4px',
+                  background: 'linear-gradient(90deg, #8B5CF6, #F59E0B)',
+                  margin: '20px auto 0',
                   borderRadius: '2px'
                 }
               }}
@@ -188,8 +199,9 @@ const Login = () => {
               align="center" 
               sx={{ 
                 mb: 4, 
-                color: '#666',
-                fontStyle: 'italic'
+                color: '#6B7280',
+                fontStyle: 'italic',
+                fontWeight: 500
               }}
             >
               Sign in to manage your dance studio
@@ -226,22 +238,22 @@ const Login = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <PersonIcon sx={{ color: '#667eea' }} />
+                      <PersonIcon sx={{ color: '#8B5CF6' }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 8,
                     '&:hover fieldset': {
-                      borderColor: '#667eea',
+                      borderColor: '#8B5CF6',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#667eea',
+                      borderColor: '#8B5CF6',
                     },
                   },
                   '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#667eea',
+                    color: '#8B5CF6',
                   },
                 }}
               />
@@ -261,7 +273,7 @@ const Login = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LockIcon sx={{ color: '#667eea' }} />
+                      <LockIcon sx={{ color: '#8B5CF6' }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -270,7 +282,7 @@ const Login = () => {
                         onClick={handleTogglePasswordVisibility}
                         edge="end"
                         disabled={isLoading}
-                        sx={{ color: '#667eea' }}
+                        sx={{ color: '#8B5CF6' }}
                       >
                         {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                       </IconButton>
@@ -279,16 +291,16 @@ const Login = () => {
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 8,
                     '&:hover fieldset': {
-                      borderColor: '#667eea',
+                      borderColor: '#8B5CF6',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#667eea',
+                      borderColor: '#8B5CF6',
                     },
                   },
                   '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#667eea',
+                    color: '#8B5CF6',
                   },
                 }}
               />
@@ -302,20 +314,20 @@ const Login = () => {
                   mt: 4,
                   mb: 2,
                   py: 1.5,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
                   fontSize: '1.1rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   textTransform: 'none',
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                  boxShadow: '0 8px 25px rgba(139, 92, 246, 0.4)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
+                    background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                    transform: 'translateY(-3px)',
+                    boxShadow: '0 12px 35px rgba(139, 92, 246, 0.6)',
                   },
                   '&:disabled': {
-                    background: '#ccc',
+                    background: '#E5E7EB',
                     transform: 'none',
                     boxShadow: 'none',
                   }
@@ -334,8 +346,9 @@ const Login = () => {
               <Typography 
                 variant="caption" 
                 sx={{ 
-                  color: '#888',
-                  fontStyle: 'italic'
+                  color: '#9CA3AF',
+                  fontStyle: 'italic',
+                  fontWeight: 500
                 }}
               >
                 Where passion meets rhythm

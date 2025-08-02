@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const sequelize = require('./config/database');
+const { Student, Attendance, Batch, User, Fee } = require('./models');
 const studentRoutes = require('./routes/studentRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const batchRoutes = require('./routes/batchRoutes');
@@ -23,6 +24,8 @@ const PORT = process.env.PORT || 5000;
 
 async function startServer() {
   try {
+    // Use alter: true to modify existing tables without dropping them
+    // This preserves existing data while updating the schema
     await sequelize.sync({ alter: true });
     console.log('Database synchronized successfully');
     

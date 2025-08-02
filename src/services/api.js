@@ -61,11 +61,7 @@ const api = {
   // Add new student
   addStudent: async (studentData) => {
     try {
-      const response = await axios.post(`${API_URL}/students`, {
-        ...studentData,
-        paymentDate: studentData.status === 'Paid' ? studentData.paymentDate : null,
-        paymentMode: studentData.status === 'Paid' ? studentData.paymentMode : null
-      });
+      const response = await axios.post(`${API_URL}/students`, studentData);
       return response.data;
     } catch (error) {
       console.error('Error adding student:', error);
@@ -76,11 +72,7 @@ const api = {
   // Update student
   updateStudent: async (id, studentData) => {
     try {
-      const response = await axios.put(`${API_URL}/students/${id}`, {
-        ...studentData,
-        paymentDate: studentData.status === 'Paid' ? studentData.paymentDate : null,
-        paymentMode: studentData.status === 'Paid' ? studentData.paymentMode : null
-      });
+      const response = await axios.put(`${API_URL}/students/${id}`, studentData);
       return response.data;
     } catch (error) {
       console.error('Error updating student:', error);
@@ -101,11 +93,9 @@ const api = {
   // Mark student as paid
   markAsPaid: async (studentId) => {
     try {
-      console.log('Sending PATCH request for student:', studentId);
       const response = await axios.patch(`${API_URL}/students/${studentId}/status`, {
         status: 'Paid'
       });
-      console.log('PATCH response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error marking student as paid:', error);
@@ -116,11 +106,9 @@ const api = {
   // Get attendance records for a specific date and batch
   getAttendance: async (date, batch) => {
     try {
-      console.log('Fetching attendance for:', { date, batch });
       const response = await axios.get(`${API_URL}/attendance`, {
         params: { date, batch }
       });
-      console.log('Attendance response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching attendance:', error);
@@ -131,20 +119,13 @@ const api = {
   // Mark attendance for students
   markAttendance: async (date, records) => {
     try {
-      console.log('Marking attendance with:', { date, records });
       const response = await axios.post(`${API_URL}/attendance`, {
         date,
         records
       });
-      console.log('Mark attendance response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error marking attendance:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       throw error;
     }
   },
@@ -225,13 +206,15 @@ const api = {
   // Update fee record
   updateFees: async (studentId, feeData) => {
     try {
-      const response = await axios.put(`${API_URL}/fees/${studentId}`, {
+      const requestData = {
         feesMonth: feeData.feesMonth,
         amount: feeData.amount,
         status: feeData.status,
         paymentDate: feeData.status === 'Paid' ? feeData.paymentDate : null,
         paymentMode: feeData.status === 'Paid' ? feeData.paymentMode : null
-      });
+      };
+      
+      const response = await axios.put(`${API_URL}/fees/${studentId}`, requestData);
       return response.data;
     } catch (error) {
       console.error('Error updating fee:', error);

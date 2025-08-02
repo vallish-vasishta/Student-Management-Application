@@ -144,10 +144,15 @@ router.get('/monthly-summary', async (req, res) => {
 // Create student
 router.post('/', async (req, res) => {
   try {
-    const { id, name, batchId, contact } = req.body;
+    const { name, batchId, contact } = req.body;
+    
+    // Generate a unique ID for the student
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    
     const student = await Student.create({ id, name, batchId, contact });
     res.status(201).json(student);
   } catch (err) {
+    console.error('Error creating student:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -183,28 +188,22 @@ router.delete('/:id', async (req, res) => {
 // Mark student as paid
 router.patch('/:id/status', async (req, res) => {
   try {
-    console.log('PATCH request received for student ID:', req.params.id);
-    console.log('Request body:', req.body);
-
     const student = await Student.findOne({
       where: { id: req.params.id }
     });
 
     if (!student) {
-      console.log('Student not found with ID:', req.params.id);
       return res.status(404).json({ 
         message: 'Student not found',
         requestedId: req.params.id
       });
     }
 
-    console.log('Found student:', student.toJSON());
-
     const updatedStudent = await student.update({
       status: req.body.status
     });
 
-    console.log('Updated student:', updatedStudent.toJSON());
+
 
     res.json(updatedStudent);
   } catch (error) {

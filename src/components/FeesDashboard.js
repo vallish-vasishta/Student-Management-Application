@@ -97,7 +97,8 @@ import {
   GroupWork as GroupWorkIcon,
   Pencil as PencilIcon,
   Trash as TrashIcon,
-  PersonAdd as PersonAddIcon
+  PersonAdd as PersonAddIcon,
+  MusicNote
 } from '@mui/icons-material';
 import { format, isPast, parseISO, isAfter, isBefore, subDays, addDays, startOfMonth } from 'date-fns';
 import { utils as xlsxUtils, writeFile } from 'xlsx';
@@ -135,22 +136,34 @@ const formatCurrency = (amount) => {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const StatCard = ({ title, value, icon, color }) => (
-  <Card sx={{ height: '100%' }}>
-    <CardContent>
+  <Card sx={{ 
+    height: '100%',
+    background: '#FFFFFF',
+    border: '1px solid #E5E7EB',
+    '&:hover': {
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+      transition: 'box-shadow 0.2s ease-in-out',
+    },
+  }}>
+    <CardContent sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <Box sx={{ 
           backgroundColor: `${color}15`,
           borderRadius: '50%',
-          p: 1,
-          mr: 2
+          p: 1.5,
+          mr: 2,
+          '& svg': {
+            color: color,
+            fontSize: 24,
+          }
         }}>
           {icon}
         </Box>
-        <Typography variant="h6" color="text.secondary">
+        <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500 }}>
           {title}
         </Typography>
       </Box>
-      <Typography variant="h4" component="div">
+      <Typography variant="h4" component="div" sx={{ fontWeight: 600, color: '#111827' }}>
         {value}
       </Typography>
     </CardContent>
@@ -158,30 +171,61 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 const BatchSummaryCard = ({ batchData }) => (
-  <Card sx={{ height: '100%' }}>
-    <CardContent>
-      <Typography variant="h6" gutterBottom>
+  <Card sx={{ 
+    height: '100%',
+    background: '#FFFFFF',
+    border: '1px solid #E5E7EB',
+    '&:hover': {
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+      transition: 'box-shadow 0.2s ease-in-out',
+    },
+  }}>
+    <CardContent sx={{ p: 3 }}>
+      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#111827' }}>
         Batch {batchData.batch}
       </Typography>
       <Box sx={{ mt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Total Students: {batchData.totalStudents}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Fees Collected: {formatCurrency(batchData.feesCollected)}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Pending Amount: {formatCurrency(batchData.pendingAmount)}
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-          <Box sx={{ flex: 1, mr: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+            Total Students:
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#6366F1' }}>
+            {batchData.totalStudents}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+            Fees Collected:
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#10B981' }}>
+            {formatCurrency(batchData.feesCollected)}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+            Pending Amount:
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#F59E0B' }}>
+            {formatCurrency(batchData.pendingAmount)}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+          <Box sx={{ flex: 1, mr: 2 }}>
             <LinearProgress 
               variant="determinate" 
               value={batchData.collectionRate} 
-              sx={{ height: 8, borderRadius: 5 }}
+              sx={{ 
+                height: 8, 
+                borderRadius: 4,
+                backgroundColor: '#F3F4F6',
+                '& .MuiLinearProgress-bar': {
+                  backgroundColor: '#6366F1',
+                  borderRadius: 4,
+                }
+              }}
             />
           </Box>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ fontWeight: 600, color: '#6366F1', minWidth: 35 }}>
             {Math.round(batchData.collectionRate)}%
           </Typography>
         </Box>
@@ -226,13 +270,49 @@ const LogoContainer = styled(Box)(({ theme }) => ({
 }));
 
 const Logo = () => (
-  <LogoContainer>
-    <img 
-      src="/logo.png" 
-      alt="Shadows Dance Studio" 
-      style={{ maxHeight: '100px' }}
-    />
-  </LogoContainer>
+  <Box
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      py: 3,
+      px: 2,
+      background: '#FFFFFF',
+      borderBottom: '1px solid #E5E7EB',
+      textAlign: 'center',
+    }}
+  >
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <MusicNote 
+        sx={{ 
+          fontSize: 32, 
+          color: '#6366F1',
+        }} 
+      />
+      <Box>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 600,
+            color: '#111827',
+            lineHeight: 1.2,
+          }}
+        >
+          Shadows Dance Studio
+        </Typography>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            display: 'block',
+            color: '#6B7280',
+            fontWeight: 500,
+          }}
+        >
+          Management System
+        </Typography>
+      </Box>
+    </Box>
+  </Box>
 );
 
 const Alert = React.forwardRef(function Alert(props, ref) {
@@ -269,10 +349,30 @@ const AddStudentDialog = ({ open, onClose, onAdd }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Add New Student</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 20px 60px rgba(139, 92, 246, 0.2)',
+        }
+      }}
+    >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+          color: 'white',
+          fontWeight: 700,
+        }}>
+          Add New Student
+        </DialogTitle>
       <form onSubmit={handleSubmit}>
-        <DialogContent>
+        <DialogContent sx={{ p: 3 }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
             <TextField
@@ -368,9 +468,32 @@ const AddStudentDialog = ({ open, onClose, onAdd }) => {
             )}
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" color="primary">
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button 
+            onClick={onClose}
+            variant="outlined"
+            sx={{
+              borderColor: '#8B5CF6',
+              color: '#8B5CF6',
+              '&:hover': {
+                borderColor: '#7C3AED',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            sx={{
+              background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                transform: 'translateY(-1px)',
+              }
+            }}
+          >
             Add Student
           </Button>
         </DialogActions>
@@ -538,7 +661,7 @@ function isValidDateString(date) {
   return date && !isNaN(new Date(date));
 }
 
-const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, attendanceData, setAttendanceData, isLoadingAttendance, setIsLoadingAttendance }) => {
+const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, attendanceData, setAttendanceData, isLoadingAttendance, setIsLoadingAttendance, allBatches = [] }) => {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedBatch, setSelectedBatch] = useState('all');
   const [showingDate, setShowingDate] = useState(format(new Date(), 'MMMM dd, yyyy'));
@@ -565,8 +688,9 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
 
   // Add getBatches function
   const getBatches = useCallback(() => {
-    return uniqueBatches;
-  }, [uniqueBatches]);
+    const batchNames = allBatches.map(batch => batch.name || batch).filter(Boolean);
+    return batchNames.sort();
+  }, [allBatches]);
 
   // Memoize fetchAttendance function
   const fetchAttendance = useCallback(async (date, batch) => {
@@ -574,9 +698,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
     
     setIsLoadingAttendance(true);
     try {
-      console.log('Fetching attendance for:', { date, batch });
       const data = await api.getAttendance(date, batch);
-      console.log('Fetched attendance data:', data);
       
       const attendanceMap = {};
       data.forEach(record => {
@@ -601,10 +723,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
 
   // Memoize handleAttendanceChange function
   const handleAttendanceChange = useCallback(async (studentId, status) => {
-    console.log('handleAttendanceChange called with:', { studentId, status, selectedDate, selectedBatch });
-    
     if (!selectedDate) {
-      console.log('Invalid selection:', { selectedDate });
       return;
     }
 
@@ -616,9 +735,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
         batch: students.find(s => s.id === studentId)?.batch || selectedBatch
       }];
 
-      console.log('Making API call to mark attendance with records:', records);
       const response = await api.markAttendance(selectedDate, records);
-      console.log('API response:', response);
       
       // Update local state after successful API call
       setAttendanceData(prev => ({
@@ -821,7 +938,6 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
 
   const handleBulkAttendance = async (status) => {
     if (!selectedDate) {
-      console.log('Invalid selection:', { selectedDate });
       return;
     }
 
@@ -845,9 +961,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
         };
       });
 
-      console.log('Making bulk API call to mark attendance with records:', records);
       const response = await api.markAttendance(selectedDate, records);
-      console.log('Bulk API response:', response);
       
       // Update local state after successful API call
       setAttendanceData(prev => ({
@@ -1368,7 +1482,7 @@ const AttendanceView = React.memo(({ students, uniqueBatches, batchSummary, atte
   );
 });
 
-const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
+const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid, allBatches = [], feesData = [], fetchFees, setSnackbar }) => {
   // Add a function to get batch name from student object
   const getBatchName = useCallback((student) => {
     if (!student) return 'N/A';
@@ -1377,12 +1491,11 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('all');
-  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [fees, setFees] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
@@ -1396,77 +1509,100 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
     paymentMode: 'Cash'
   });
 
-  // Get unique months from fees data
-  const uniqueMonths = useMemo(() => {
-    if (!fees) return ['all'];
-    const months = [...new Set(fees.map(fee => fee.feesMonth))].filter(Boolean);
-    return ['all', ...months.sort().reverse()];
-  }, [fees]);
+  // Generate all months for the past year
+  const availableMonths = useMemo(() => {
+    const months = [];
+    const currentDate = new Date();
+    
+    // Generate 12 months from current month backwards
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthStr = format(date, 'yyyy-MM');
+      months.push(monthStr);
+    }
+    
+    return months;
+  }, []);
 
-  // Get unique batches from students
-  const uniqueBatches = useMemo(() => {
-    if (!students) return ['all'];
-    const batches = [...new Set(students.map(student => student.batch?.name || student.batch))].filter(Boolean);
-    return ['all', ...batches.sort()];
-  }, [students]);
+  // Get all batches from database (same logic as StudentsView)
+  const availableBatches = useMemo(() => {
+    const batchNames = allBatches.map(batch => batch.name || batch).filter(Boolean);
+    return ['all', ...batchNames.sort()];
+  }, [allBatches]);
 
-  // Filter and sort fees
-  const filteredFees = useMemo(() => {
-    if (!fees) return [];
-    let result = [...fees];
+  // Filter and sort students/fees
+  const filteredData = useMemo(() => {
+    let result = [];
+
+    // Show only students who have fee records in the database for the selected month
+    result = feesData
+      .filter(fee => {
+        // Convert database date to YYYY-MM format for comparison
+        const feeMonth = fee.feesMonth ? fee.feesMonth.substring(0, 7) : null;
+        return feeMonth === selectedMonth;
+      })
+      .map(fee => {
+        // Find the corresponding student
+        const student = students.find(s => s.id === fee.studentId);
+        if (!student) {
+          return null; // Skip if student not found
+        }
+        
+        return {
+          student,
+          fee: fee
+        };
+      })
+      .filter(item => item !== null); // Remove null items
+
+    // Filter by batch if selected
+    if (selectedBatch !== 'all') {
+      result = result.filter(item => 
+        getBatchName(item.student) === selectedBatch
+      );
+    }
 
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(fee => 
-        fee.Student?.name?.toLowerCase().includes(query) ||
-        getBatchName(fee.Student)?.toLowerCase().includes(query) ||
-        fee.feesMonth?.toLowerCase().includes(query)
+      result = result.filter(item => 
+        item.student.name?.toLowerCase().includes(query) ||
+        getBatchName(item.student)?.toLowerCase().includes(query)
       );
     }
 
-    // Filter by batch
-    if (selectedBatch !== 'all') {
-      result = result.filter(fee => 
-        getBatchName(fee.Student) === selectedBatch
-      );
-    }
-
-    // Filter by month
-    if (selectedMonth !== 'all') {
-      result = result.filter(fee => 
-        fee.feesMonth === selectedMonth
-      );
-    }
-
-    // Sort
+    // Sort: unpaid students first, then by selected field
     result.sort((a, b) => {
-      let aValue, bValue;
+      // First sort by payment status (unpaid first)
+      if (a.fee.status === 'Unpaid' && b.fee.status !== 'Unpaid') return -1;
+      if (a.fee.status !== 'Unpaid' && b.fee.status === 'Unpaid') return 1;
       
+      // Then sort by selected field
+      let aValue, bValue;
       switch (sortField) {
         case 'name':
-          aValue = a.Student?.name || '';
-          bValue = b.Student?.name || '';
+          aValue = a.student.name || '';
+          bValue = b.student.name || '';
           break;
         case 'batch':
-          aValue = getBatchName(a.Student) || '';
-          bValue = getBatchName(b.Student) || '';
-          break;
-        case 'feesMonth':
-          aValue = a.feesMonth || '';
-          bValue = b.feesMonth || '';
+          aValue = getBatchName(a.student) || '';
+          bValue = getBatchName(b.student) || '';
           break;
         case 'amount':
-          aValue = Number(a.amount) || 0;
-          bValue = Number(b.amount) || 0;
+          aValue = Number(a.fee.amount) || 0;
+          bValue = Number(b.fee.amount) || 0;
           break;
         case 'status':
-          aValue = a.status || '';
-          bValue = b.status || '';
+          aValue = a.fee.status || '';
+          bValue = b.fee.status || '';
+          break;
+        case 'feesMonth':
+          aValue = a.fee.feesMonth || '';
+          bValue = b.fee.feesMonth || '';
           break;
         default:
-          aValue = a[sortField] || '';
-          bValue = b[sortField] || '';
+          aValue = a.student[sortField] || '';
+          bValue = b.student[sortField] || '';
       }
 
       if (sortDirection === 'asc') {
@@ -1477,26 +1613,9 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
     });
 
     return result;
-  }, [fees, searchQuery, selectedBatch, selectedMonth, sortField, sortDirection, getBatchName]);
+  }, [students, feesData, searchQuery, selectedBatch, selectedMonth, sortField, sortDirection, getBatchName]);
 
-  // Fetch fees data
-  const fetchFees = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.getFees();
-      setFees(data || []);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching fees:', err);
-      setError('Failed to fetch fee data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    fetchFees();
-  }, [fetchFees]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -1509,14 +1628,14 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
 
   const handleExport = async (format) => {
     try {
-      const data = filteredFees.map(fee => ({
-        'Student Name': fee.Student?.name || '',
-        'Batch': fee.Student?.batch?.name || fee.Student?.batch || '',
-        'Fees Month': fee.feesMonth || '',
-        'Amount': fee.amount || 0,
-        'Status': fee.status || '',
-        'Payment Date': fee.paymentDate || '',
-        'Payment Mode': fee.paymentMode || ''
+      const data = filteredData.map(item => ({
+        'Student Name': item.student.name || '',
+        'Batch': getBatchName(item.student) || '',
+        'Fees Month': item.fee.feesMonth || '',
+        'Amount': item.fee.amount || 0,
+        'Status': item.fee.status || '',
+        'Payment Date': item.fee.paymentDate || '',
+        'Payment Mode': item.fee.paymentMode || ''
       }));
 
       if (format === 'excel') {
@@ -1555,22 +1674,29 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
     }
   };
 
+
+
   const handleEditFee = async (feeData) => {
+    // We'll try to update first, and if that fails, we'll create a new record
+    
     try {
       if (!selectedFee) {
         console.error('No fee selected for editing');
         return;
       }
 
+      // Convert month format to full date format for database
+      const feeMonthDate = feeData.feesMonth.includes('-01') ? feeData.feesMonth : `${feeData.feesMonth}-01`;
+      
       const updatedFeeData = {
-        feesMonth: feeData.feesMonth,
+        feesMonth: feeMonthDate,
         amount: Number(feeData.amount),
         status: feeData.status,
         paymentDate: feeData.status === 'Paid' ? feeData.paymentDate : null,
         paymentMode: feeData.status === 'Paid' ? feeData.paymentMode : null
       };
-
-      // Call the API to update the fee
+      
+      // Update the fee record in the database
       await api.updateFees(selectedFee.studentId, updatedFeeData);
       
       // Refresh the fees data
@@ -1587,8 +1713,26 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
         paymentDate: format(new Date(), 'yyyy-MM-dd'),
         paymentMode: 'Cash'
       });
+      
+      // Show success message
+      if (setSnackbar) {
+        setSnackbar({
+          open: true,
+          message: 'Fee record updated successfully',
+          severity: 'success'
+        });
+      }
     } catch (error) {
       console.error('Error editing fee:', error);
+      
+      // Show error message
+      if (setSnackbar) {
+        setSnackbar({
+          open: true,
+          message: `Failed to update fee record: ${error.response?.data?.error || error.message}`,
+          severity: 'error'
+        });
+      }
     }
   };
 
@@ -1614,8 +1758,8 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
 
   const handleEditClick = (fee) => {
     setSelectedFee(fee);
-    // Format the feesMonth to ensure it's in the correct format (YYYY-MM)
-    const formattedMonth = fee.feesMonth ? format(parseISO(fee.feesMonth), 'yyyy-MM') : format(new Date(), 'yyyy-MM');
+    // Convert database date format (YYYY-MM-DD) to month format (YYYY-MM) for editing
+    const formattedMonth = fee.feesMonth ? fee.feesMonth.substring(0, 7) : format(new Date(), 'yyyy-MM');
     
     setNewFee({
       studentId: fee.studentId,
@@ -1628,13 +1772,7 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
     setOpenEditDialog(true);
   };
 
-  if (loading) {
-  return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+
 
   if (error) {
     return (
@@ -1646,8 +1784,8 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={3}>
+      <Grid container spacing={2} sx={{ mb: 3, alignItems: 'center' }}>
+        <Grid item xs={12} md={2}>
           <TextField
             fullWidth
             label="Search"
@@ -1662,7 +1800,7 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
             }}
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={2}>
           <FormControl fullWidth>
             <InputLabel>Filter by Batch</InputLabel>
             <Select
@@ -1670,7 +1808,7 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
               onChange={(e) => setSelectedBatch(e.target.value)}
               label="Filter by Batch"
             >
-              {uniqueBatches.map((batch) => (
+              {availableBatches.map((batch) => (
                 <MenuItem key={batch} value={batch}>
                   {batch === 'all' ? 'All Batches' : batch}
                 </MenuItem>
@@ -1678,36 +1816,73 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} md={2}>
           <FormControl fullWidth>
-            <InputLabel>Filter by Month</InputLabel>
+            <InputLabel>Select Month</InputLabel>
             <Select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              label="Filter by Month"
+              label="Select Month"
             >
-              {uniqueMonths.map((month) => (
+              {availableMonths.map((month) => (
                 <MenuItem key={month} value={month}>
-                  {month === 'all' ? 'All Months' : format(parseISO(month), 'MMMM yyyy')}
+                  {format(parseISO(month), 'MMMM yyyy')}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={3}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+        <Grid item xs={12} md={6}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1.5, 
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            height: '100%',
+            minHeight: '56px'
+          }}>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setOpenAddDialog(true)}
-              sx={{ mr: 1 }}
+              sx={{ 
+                minWidth: '120px',
+                height: '40px',
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: '8px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }}
             >
               Add Fee
             </Button>
             <Button
               variant="outlined"
+              onClick={() => {
+                
+              }}
+              sx={{ 
+                minWidth: '120px',
+                height: '40px',
+                textTransform: 'none',
+                borderRadius: '8px',
+                borderWidth: '1.5px'
+              }}
+            >
+              Debug Info
+            </Button>
+            <Button
+              variant="outlined"
               startIcon={<FileDownloadIcon />}
               onClick={() => handleExport('excel')}
+              sx={{ 
+                minWidth: '140px',
+                height: '40px',
+                textTransform: 'none',
+                borderRadius: '8px',
+                borderWidth: '1.5px'
+              }}
             >
               Export Excel
             </Button>
@@ -1715,6 +1890,13 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
               variant="outlined"
               startIcon={<FileDownloadIcon />}
               onClick={() => handleExport('pdf')}
+              sx={{ 
+                minWidth: '140px',
+                height: '40px',
+                textTransform: 'none',
+                borderRadius: '8px',
+                borderWidth: '1.5px'
+              }}
             >
               Export PDF
             </Button>
@@ -1732,9 +1914,7 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
               <TableCell onClick={() => handleSort('batch')} style={{ cursor: 'pointer' }}>
                 Batch {sortField === 'batch' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
-              <TableCell onClick={() => handleSort('feesMonth')} style={{ cursor: 'pointer' }}>
-                Fees Month {sortField === 'feesMonth' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableCell>
+
               <TableCell onClick={() => handleSort('amount')} style={{ cursor: 'pointer' }}>
                 Amount {sortField === 'amount' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
@@ -1751,40 +1931,40 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredFees.length === 0 ? (
+            {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center">
-                  No fee records found
+                <TableCell colSpan={7} align="center">
+                  {selectedBatch !== 'all' ? `No students found in batch "${selectedBatch}"` : `No students found for ${format(parseISO(selectedMonth), 'MMMM yyyy')}`}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredFees.map((fee) => (
-                <TableRow key={`${fee.studentId}-${fee.feesMonth}`}>
-                  <TableCell>{fee.Student?.name || ''}</TableCell>
-                  <TableCell>{getBatchName(fee.Student)}</TableCell>
-                  <TableCell>{fee.feesMonth || ''}</TableCell>
-                  <TableCell>₹{fee.amount || 0}</TableCell>
+              filteredData.map((item) => (
+                <TableRow key={`${item.student.id}-${item.fee.feesMonth}`}>
+                  <TableCell>{item.student.name || ''}</TableCell>
+                  <TableCell>{getBatchName(item.student)}</TableCell>
+
+                  <TableCell>₹{item.fee.amount || 0}</TableCell>
                 <TableCell>
                   <Chip 
-                      label={fee.status || 'Unpaid'}
-                      color={fee.status === 'Paid' ? 'success' : 'error'}
+                      label={item.fee.status || 'Unpaid'}
+                      color={item.fee.status === 'Paid' ? 'success' : 'error'}
                     size="small"
                   />
                 </TableCell>
-                  <TableCell>{fee.paymentDate || '-'}</TableCell>
-                  <TableCell>{fee.paymentMode || '-'}</TableCell>
+                  <TableCell>{item.fee.paymentDate || '-'}</TableCell>
+                  <TableCell>{item.fee.paymentMode || '-'}</TableCell>
                   <TableCell>
                       <IconButton 
                         size="small" 
-                      onClick={() => handleEditClick(fee)}
+                      onClick={() => handleEditClick(item.fee)}
                       sx={{ mr: 1 }}
                       >
                         <EditIcon />
                       </IconButton>
-                    {fee.status !== 'Paid' && (
+                    {item.fee.status !== 'Paid' && (
                         <IconButton 
                           size="small"
-                        onClick={() => handleMarkAsPaid(fee)}
+                        onClick={() => handleMarkAsPaid(item.fee)}
                           color="success"
                         sx={{ mr: 1 }}
                         >
@@ -1794,7 +1974,7 @@ const DetailedView = React.memo(({ students = [], onEdit, onMarkAsPaid }) => {
                     <IconButton
                       size="small"
                       onClick={() => {
-                        setSelectedFee(fee);
+                        setSelectedFee(item.fee);
                         setOpenDeleteDialog(true);
                       }}
                       color="error"
@@ -2336,7 +2516,7 @@ const FeesDashboard = ({ initialTab }) => {
     if (userRole === 'trainer') return 2;
     if (initialTab === 'attendance') return 2;
     if (initialTab === 'visualizations') return 1;
-    return 0;
+    return 1; // Default to visualizations tab
   };
   
   const [selectedTab, setSelectedTab] = useState(getInitialTab());
@@ -2346,23 +2526,69 @@ const FeesDashboard = ({ initialTab }) => {
   const [attendanceData, setAttendanceData] = useState({});
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
 
+  // Function to handle tab switching with data refresh
+  const handleTabSwitch = async (newTab) => {
+    setSelectedTab(newTab);
+    
+    // Refresh data when switching to Detailed View (tab 0) or Visualizations (tab 1)
+    if (newTab === 0 || newTab === 1) {
+      try {
+        setLoading(true);
+    
+        
+        // Fetch fresh students data
+        const data = await api.getStudents();
+        
+        setStudents(data);
+        
+        // Fetch fresh batches data
+        const batches = await api.getBatches();
+        
+        setAllBatches(batches);
+        
+        // Fetch fresh attendance data for current date
+        const today = format(new Date(), 'yyyy-MM-dd');
+                  const attendance = await api.getAttendance(today, 'all');
+        
+        // Initialize attendance map with 'absent' for all students
+        const attendanceMap = {};
+        data.forEach(student => {
+          attendanceMap[student.id] = 'absent';
+        });
+        
+        // Update with actual attendance data if available
+        if (attendance && attendance.length > 0) {
+          attendance.forEach(record => {
+            attendanceMap[record.studentId] = record.status;
+          });
+        }
+        
+        setAttendanceData({ [today]: attendanceMap });
+        setError(null);
+      } catch (err) {
+        console.error('Error refreshing data:', err);
+        setError('Failed to refresh data');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Fetch students and attendance data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log('Fetching initial data...');
+  
         
         // Fetch students data
         const data = await api.getStudents();
-        console.log('Fetched students:', data);
+        
         setStudents(data);
         
         // Fetch attendance data for current date
         const today = format(new Date(), 'yyyy-MM-dd');
-        console.log('Fetching attendance:', { date: today, batch: 'all' });
-        const attendance = await api.getAttendance(today, 'all');
-        console.log('Fetched attendance data:', attendance);
+                  const attendance = await api.getAttendance(today, 'all');
         
         // Initialize attendance map with 'absent' for all students
         const attendanceMap = {};
@@ -2518,7 +2744,7 @@ const FeesDashboard = ({ initialTab }) => {
       return;
     }
 
-    console.log('Setting up session timeout');
+    
     
     const handleSessionTimeout = () => {
       const currentAuth = localStorage.getItem('isAuthenticated') === 'true';
@@ -2597,11 +2823,50 @@ const FeesDashboard = ({ initialTab }) => {
   // Handlers for student management
   const handleAddStudent = async (studentData) => {
     try {
-      await api.addStudent(studentData);
+  
+      
+      // Add the student and get the created student with ID
+      const createdStudent = await api.addStudent(studentData);
+      
+      
       const updatedStudents = await api.getStudents();
       setStudents(updatedStudents);
-      setSnackbar({ open: true, message: 'Student added successfully', severity: 'success' });
+      
+      // Automatically create fee records for the new student for the past 12 months
+      const currentDate = new Date();
+      
+      
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        const monthStr = format(date, 'yyyy-MM-dd'); // Use full date format
+        
+        const feeData = {
+          studentId: createdStudent.id, // Use the ID from the created student
+          feesMonth: monthStr,
+          amount: 0,
+          status: 'Unpaid',
+          paymentDate: null,
+          paymentMode: null
+        };
+        
+                  try {
+            await api.addFee(feeData);
+          } catch (feeError) {
+            console.error(`Error creating fee record ${i + 1}:`, feeError);
+            // Continue with other fee records even if one fails
+          }
+      }
+      
+      
+      
+      // Refresh fees data
+      await fetchFees();
+      
+      
+      setSnackbar({ open: true, message: 'Student added successfully with fee records', severity: 'success' });
     } catch (error) {
+      console.error('Error adding student:', error);
+      console.error('Error response:', error.response?.data);
       setSnackbar({ open: true, message: 'Failed to add student', severity: 'error' });
     }
   };
@@ -2691,10 +2956,51 @@ const FeesDashboard = ({ initialTab }) => {
   };
 
   // Derived data
-  const uniqueBatches = useMemo(() => 
-    Array.from(new Set(students.map(student => student.batch?.name || student.batch))).filter(Boolean).sort(),
-    [students]
-  );
+  const [allBatches, setAllBatches] = useState([]);
+  const [fees, setFees] = useState([]);
+  
+  // Fetch all batches from database
+  useEffect(() => {
+    const fetchBatches = async () => {
+      try {
+        const batches = await api.getBatches();
+        setAllBatches(batches);
+      } catch (error) {
+        console.error('Error fetching batches:', error);
+      }
+    };
+    fetchBatches();
+  }, []);
+
+  // Fetch fees data
+  const fetchFees = useCallback(async () => {
+    try {
+      const data = await api.getFees();
+      setFees(data || []);
+    } catch (err) {
+      console.error('Error fetching fees:', err);
+      // Set empty array on error to prevent infinite loading
+      setFees([]);
+    }
+  }, []);
+
+  // Initial fetch of fees
+  useEffect(() => {
+    fetchFees();
+  }, [fetchFees]);
+
+  const uniqueBatches = useMemo(() => {
+    // Get batches from students (for backward compatibility)
+    const studentBatches = Array.from(new Set(students.map(student => student.batch?.name || student.batch))).filter(Boolean);
+    
+    // Get all batches from database
+    const allBatchNames = allBatches.map(batch => batch.name || batch);
+    
+    // Combine and remove duplicates
+    const combinedBatches = [...new Set([...studentBatches, ...allBatchNames])];
+    
+    return combinedBatches.sort();
+  }, [students, allBatches]);
   const uniqueMonths = useMemo(() => 
     Array.from(new Set(students
       .filter(student => isValidDateString(student.feesMonth))
@@ -2724,43 +3030,172 @@ const FeesDashboard = ({ initialTab }) => {
   const drawerWidth = 240;
 
   const drawer = (
-    <Box sx={{ overflow: 'auto' }}>
+    <Box sx={{ 
+      overflow: 'auto',
+      background: '#FFFFFF',
+      height: '100%'
+    }}>
       <Logo />
       <Divider />
-      <List>
+      <List sx={{ px: 1, py: 1 }}>
         {userRole === 'admin' && (
           <>
-            <ListItem button selected={selectedTab === 0} onClick={() => setSelectedTab(0)}>
+            <ListItem 
+              button 
+              selected={selectedTab === 0} 
+              onClick={() => handleTabSwitch(0)}
+              sx={{
+                borderRadius: 1,
+                mx: 1,
+                mb: 0.5,
+                '&.Mui-selected': {
+                  backgroundColor: '#6366F1',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#4F46E5',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: 'white',
+                  },
+                },
+                '&:hover': {
+                  backgroundColor: '#F3F4F6',
+                },
+              }}
+            >
               <ListItemIcon>
                 <TableChartIcon />
               </ListItemIcon>
-              <ListItemText primary="Detailed View" />
+              <ListItemText 
+                primary="Detailed View" 
+                primaryTypographyProps={{ fontWeight: selectedTab === 0 ? 600 : 500 }}
+              />
             </ListItem>
-            <ListItem button selected={selectedTab === 1} onClick={() => setSelectedTab(1)}>
+            <ListItem 
+              button 
+              selected={selectedTab === 1} 
+              onClick={() => handleTabSwitch(1)}
+              sx={{
+                borderRadius: 1,
+                mx: 1,
+                mb: 0.5,
+                '&.Mui-selected': {
+                  backgroundColor: '#6366F1',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#4F46E5',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: 'white',
+                  },
+                },
+                '&:hover': {
+                  backgroundColor: '#F3F4F6',
+                },
+              }}
+            >
               <ListItemIcon>
                 <InsertChartIcon />
               </ListItemIcon>
-              <ListItemText primary="Visualizations" />
+              <ListItemText 
+                primary="Visualizations" 
+                primaryTypographyProps={{ fontWeight: selectedTab === 1 ? 600 : 500 }}
+              />
             </ListItem>
-            <ListItem button selected={selectedTab === 3} onClick={() => setSelectedTab(3)}>
+            <ListItem 
+              button 
+              selected={selectedTab === 3} 
+              onClick={() => handleTabSwitch(3)}
+              sx={{
+                borderRadius: 1,
+                mx: 1,
+                mb: 0.5,
+                '&.Mui-selected': {
+                  backgroundColor: '#6366F1',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#4F46E5',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: 'white',
+                  },
+                },
+                '&:hover': {
+                  backgroundColor: '#F3F4F6',
+                },
+              }}
+            >
               <ListItemIcon>
                 <PeopleIcon />
               </ListItemIcon>
-              <ListItemText primary="Students" />
+              <ListItemText 
+                primary="Students" 
+                primaryTypographyProps={{ fontWeight: selectedTab === 3 ? 600 : 500 }}
+              />
             </ListItem>
-            <ListItem button selected={selectedTab === 4} onClick={() => setSelectedTab(4)}>
+            <ListItem 
+              button 
+              selected={selectedTab === 4} 
+              onClick={() => handleTabSwitch(4)}
+              sx={{
+                borderRadius: 1,
+                mx: 1,
+                mb: 0.5,
+                '&.Mui-selected': {
+                  backgroundColor: '#6366F1',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#4F46E5',
+                  },
+                  '& .MuiListItemIcon-root': {
+                    color: 'white',
+                  },
+                },
+                '&:hover': {
+                  backgroundColor: '#F3F4F6',
+                },
+              }}
+            >
               <ListItemIcon>
                 <GroupWorkIcon />
               </ListItemIcon>
-              <ListItemText primary="Batches" />
+              <ListItemText 
+                primary="Batches" 
+                primaryTypographyProps={{ fontWeight: selectedTab === 4 ? 600 : 500 }}
+              />
             </ListItem>
           </>
         )}
-        <ListItem button selected={selectedTab === 2} onClick={() => setSelectedTab(2)}>
+        <ListItem 
+          button 
+          selected={selectedTab === 2} 
+          onClick={() => handleTabSwitch(2)}
+          sx={{
+            borderRadius: 1,
+            mx: 1,
+            mb: 0.5,
+            '&.Mui-selected': {
+              backgroundColor: '#6366F1',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#4F46E5',
+              },
+              '& .MuiListItemIcon-root': {
+                color: 'white',
+              },
+            },
+            '&:hover': {
+              backgroundColor: '#F3F4F6',
+            },
+          }}
+        >
           <ListItemIcon>
             <TodayIcon />
           </ListItemIcon>
-          <ListItemText primary="Attendance" />
+          <ListItemText 
+            primary="Attendance" 
+            primaryTypographyProps={{ fontWeight: selectedTab === 2 ? 600 : 500 }}
+          />
         </ListItem>
       </List>
     </Box>
@@ -2769,16 +3204,51 @@ const FeesDashboard = ({ initialTab }) => {
   const mainContent = () => {
     if (loading) {
       return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-          <CircularProgress />
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100%',
+          background: '#F9FAFB',
+        }}>
+          <Box sx={{ 
+            backgroundColor: '#6366F1',
+            borderRadius: '50%',
+            p: 3,
+            mb: 2,
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+          }}>
+            <CircularProgress sx={{ color: 'white' }} size={40} />
+          </Box>
+          <Typography variant="h6" sx={{ color: '#6B7280', fontWeight: 500 }}>
+            Loading your data...
+          </Typography>
         </Box>
       );
     }
 
     if (error) {
       return (
-        <Box sx={{ p: 2 }}>
-          <Alert severity="error">{error}</Alert>
+        <Box sx={{ 
+          p: 3,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100%',
+          background: '#F9FAFB',
+        }}>
+          <Card sx={{ 
+            maxWidth: 400,
+            background: '#FFFFFF',
+            border: '1px solid #E5E7EB',
+          }}>
+            <CardContent sx={{ p: 3, textAlign: 'center' }}>
+              <Alert severity="error" sx={{ borderRadius: 2 }}>
+                {error}
+              </Alert>
+            </CardContent>
+          </Card>
         </Box>
       );
     }
@@ -2786,9 +3256,16 @@ const FeesDashboard = ({ initialTab }) => {
     switch(selectedTab) {
       case 0:
         return (
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ 
+            p: 3,
+            background: '#F9FAFB',
+            minHeight: '100%'
+          }}>
             <DetailedView 
               students={students}
+              allBatches={allBatches}
+              feesData={fees}
+              fetchFees={fetchFees}
               onEdit={(fee) => {
                 setSelectedStudent(fee);
                 setOpenEditDialog(true);
@@ -2799,7 +3276,11 @@ const FeesDashboard = ({ initialTab }) => {
         );
       case 1:
         return (
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ 
+            p: 3,
+            background: '#F9FAFB',
+            minHeight: '100%'
+          }}>
             <VisualizationsView 
               filteredStudents={filteredStudents}
               students={students}
@@ -2810,7 +3291,11 @@ const FeesDashboard = ({ initialTab }) => {
         );
       case 2:
         return (
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ 
+            p: 3,
+            background: '#F9FAFB',
+            minHeight: '100%'
+          }}>
             <AttendanceView 
               students={students} 
               uniqueBatches={uniqueBatches} 
@@ -2819,25 +3304,38 @@ const FeesDashboard = ({ initialTab }) => {
               setAttendanceData={setAttendanceData}
               isLoadingAttendance={isLoadingAttendance}
               setIsLoadingAttendance={setIsLoadingAttendance}
+              allBatches={allBatches}
             />
           </Box>
         );
       case 3:
         return (
-          <Box sx={{ p: 2 }}>
-            <StudentsView />
+          <Box sx={{ 
+            p: 3,
+            background: '#F9FAFB',
+            minHeight: '100%'
+          }}>
+            <StudentsView onAddStudent={handleAddStudent} />
           </Box>
         );
       case 4:
         return (
-          <Box sx={{ p: 2 }}>
+          <Box sx={{ 
+            p: 3,
+            background: '#F9FAFB',
+            minHeight: '100%'
+          }}>
             <BatchesView />
           </Box>
         );
       default:
         return (
-          <Box sx={{ p: 2 }}>
-            <DetailedView />
+          <Box sx={{ 
+            p: 3,
+            background: '#F9FAFB',
+            minHeight: '100%'
+          }}>
+            <DetailedView allBatches={allBatches} feesData={fees} fetchFees={fetchFees} setSnackbar={setSnackbar} />
           </Box>
         );
     }
@@ -3052,11 +3550,12 @@ const FeesDashboard = ({ initialTab }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 0, // Remove default padding
+          p: 0,
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          mt: '64px', // Height of AppBar
+          mt: '64px',
           height: 'calc(100vh - 64px)',
-          overflow: 'auto'
+          overflow: 'auto',
+          background: '#F9FAFB',
         }}
       >
         {mainContent()}
@@ -3096,18 +3595,54 @@ const FeesDashboard = ({ initialTab }) => {
         onClose={handleLogoutCancel}
         aria-labelledby="logout-dialog-title"
         aria-describedby="logout-dialog-description"
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 20px 60px rgba(139, 92, 246, 0.2)',
+          }
+        }}
       >
-        <DialogTitle id="logout-dialog-title">
+        <DialogTitle id="logout-dialog-title" sx={{ 
+          background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+          color: 'white',
+          fontWeight: 700,
+        }}>
           Confirm Logout
         </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="logout-dialog-description">
+        <DialogContent sx={{ p: 3 }}>
+          <DialogContentText id="logout-dialog-description" sx={{ color: '#6B7280' }}>
             Are you sure you want to log out? Any unsaved changes will be lost.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleLogoutCancel}>Cancel</Button>
-          <Button onClick={handleLogoutConfirm} color="error" variant="contained">
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button 
+            onClick={handleLogoutCancel}
+            variant="outlined"
+            sx={{
+              borderColor: '#8B5CF6',
+              color: '#8B5CF6',
+              '&:hover': {
+                borderColor: '#7C3AED',
+                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleLogoutConfirm} 
+            variant="contained" 
+            sx={{
+              background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+                transform: 'translateY(-1px)',
+              }
+            }}
+          >
             Logout
           </Button>
         </DialogActions>

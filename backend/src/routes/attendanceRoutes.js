@@ -91,7 +91,6 @@ router2.get('/history', async (req, res) => {
 // Mark attendance for students
 router2.post('/', async (req, res) => {
   try {
-    console.log('Received attendance data:', req.body);
     const { date, records } = req.body;
     
     if (!date || !records || !Array.isArray(records)) {
@@ -101,7 +100,7 @@ router2.post('/', async (req, res) => {
       });
     }
 
-    console.log('Processing attendance for date:', date);
+
     
     // First, find existing records for this date and these students
     const studentIds = records.map(r => r.studentId);
@@ -114,7 +113,7 @@ router2.post('/', async (req, res) => {
       }
     });
 
-    console.log('Existing records:', existingRecords);
+    
 
     // Update existing records and create new ones
     for (const record of records) {
@@ -124,13 +123,12 @@ router2.post('/', async (req, res) => {
       );
 
       if (existing) {
-        console.log('Updating existing record:', existing.id);
+
         await Attendance.update(
           { status: record.status },
           { where: { id: existing.id } }
         );
-      } else {
-        console.log('Creating new record:', record);
+              } else {
         await Attendance.create({
           id: record.id,
           studentId: record.studentId,
@@ -161,7 +159,7 @@ router2.post('/', async (req, res) => {
       }]
     });
 
-    console.log('Updated records:', updatedRecords);
+    
 
     res.json({
       success: true,
@@ -184,7 +182,7 @@ router2.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    console.log('Updating attendance record:', id, status);
+
 
     const attendance = await Attendance.findByPk(id);
     if (!attendance) {
@@ -209,7 +207,7 @@ router2.put('/:id', async (req, res) => {
       }]
     });
 
-    console.log('Updated attendance:', updated);
+
 
     res.json({
       success: true,
