@@ -130,6 +130,19 @@ const api = {
     }
   },
 
+  // Get attendance records for a date range and batch
+  getAttendanceRange: async (startDate, endDate, batch) => {
+    try {
+      const response = await axios.get(`${API_URL}/attendance/range`, {
+        params: { startDate, endDate, batch }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching attendance range:', error);
+      throw error;
+    }
+  },
+
   // Get all batches
   getBatches: async () => {
     try {

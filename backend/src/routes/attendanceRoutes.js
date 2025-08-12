@@ -88,6 +88,52 @@ router2.get('/history', async (req, res) => {
   }
 });
 
+// Get attendance for a date range (for monthly view)
+router2.get('/range', async (req, res) => {
+  try {
+    const { startDate, endDate, batch } = req.query;
+    const studentWhere = {};
+    
+    if (batch && batch !== 'all') {
+      studentWhere.batchId = batch;
+    }
+
+    // Get all students for the batch
+    const students = await Student.findAll({
+      where: studentWhere,
+      include: [{
+        model: Batch,
+        as: 'batch',
+        attributes: ['id', 'name', 'timings']
+      }]
+    });
+
+    // Get attendance records for the date range
+    const attendanceRecords = await Attendance.findAll({
+      where: {
+        date: {
+          [Op.between]: [startDate, endDate]
+        },
+        studentId: { [Op.in]: students.map(s => s.id) }
+      }
+    });
+
+    // Format the response for monthly view
+    const result = attendanceRecords.map(record => ({
+      id: record.id,
+      studentId: record.studentId,
+      date: record.date,
+      status: record.status,
+      student: students.find(s => s.id === record.studentId)
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error fetching attendance range:', error);
+    res.status(500).json({ message: 'Error fetching attendance range' });
+  }
+});
+
 // Mark attendance for students
 router2.post('/', async (req, res) => {
   try {
