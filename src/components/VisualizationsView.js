@@ -6,6 +6,7 @@ import {
   Box,
   Typography,
   LinearProgress,
+  useTheme,
 } from '@mui/material';
 import {
   PaidOutlined,
@@ -35,13 +36,15 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-const StatCard = ({ title, value, icon, color }) => (
+const StatCard = ({ title, value, icon, color, theme }) => (
   <Card sx={{ 
     height: '100%',
-    background: '#FFFFFF',
-    border: '1px solid #E5E7EB',
+    background: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
     '&:hover': {
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+      boxShadow: theme.palette.mode === 'dark' 
+        ? '0 4px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2)'
+        : '0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
       transition: 'box-shadow 0.2s ease-in-out',
     },
   }}>
@@ -63,7 +66,7 @@ const StatCard = ({ title, value, icon, color }) => (
           {title}
         </Typography>
       </Box>
-      <Typography variant="h4" component="div" sx={{ fontWeight: 600, color: '#111827' }}>
+      <Typography variant="h4" component="div" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
         {value}
       </Typography>
     </CardContent>
@@ -76,6 +79,7 @@ const VisualizationsView = React.memo(({
   batchSummary, 
   selectedTimeRange 
 }) => {
+  const theme = useTheme();
   // Get unique months from the last 3 months
   const availableMonths = useMemo(() => {
     const months = new Set();
@@ -184,6 +188,7 @@ const VisualizationsView = React.memo(({
             value={currentMetrics.totalStudents}
             icon={<GroupOutlined sx={{ color: '#1976d2' }} />}
             color="#1976d2"
+            theme={theme}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -192,6 +197,7 @@ const VisualizationsView = React.memo(({
             value={formatCurrency(currentMetrics.totalFees)}
             icon={<PaidOutlined sx={{ color: '#2e7d32' }} />}
             color="#2e7d32"
+            theme={theme}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -200,6 +206,7 @@ const VisualizationsView = React.memo(({
             value={currentMetrics.overdueCount}
             icon={<WarningAmberOutlined sx={{ color: '#d32f2f' }} />}
             color="#d32f2f"
+            theme={theme}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -208,6 +215,7 @@ const VisualizationsView = React.memo(({
             value={`${Math.round(currentMetrics.collectionRate)}%`}
             icon={<TrendingUpOutlined sx={{ color: '#7b1fa2' }} />}
             color="#7b1fa2"
+            theme={theme}
           />
         </Grid>
       </Grid>
@@ -223,7 +231,10 @@ const VisualizationsView = React.memo(({
           
           return (
             <Grid item xs={12} md={4} key={month}>
-              <Card>
+              <Card sx={{ 
+                background: theme.palette.background.paper,
+                border: `1px solid ${theme.palette.divider}`,
+              }}>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     {format(parseISO(`${month}-01`), 'MMMM yyyy')}
@@ -272,23 +283,35 @@ const VisualizationsView = React.memo(({
       {/* Charts */}
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
-          <Card sx={{ mb: 3 }}>
+          <Card sx={{ 
+            mb: 3,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>Monthly Collection Trends</Typography>
               <Box sx={{ width: '100%', height: 300 }}>
                 <ResponsiveContainer>
                   <AreaChart data={monthlyTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                     <XAxis 
                       dataKey="month" 
                       tickFormatter={(value) => format(new Date(value), 'MMM yy')}
+                      tick={{ fill: theme.palette.text.secondary }}
                     />
                     <YAxis 
                       tickFormatter={(value) => `₹${value / 1000}K`}
+                      tick={{ fill: theme.palette.text.secondary }}
                     />
                     <RechartsTooltip
                       formatter={(value) => formatCurrency(value)}
                       labelFormatter={(label) => format(new Date(label), 'MMMM yyyy')}
+                      contentStyle={{
+                        backgroundColor: theme.palette.background.paper,
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 8,
+                        color: theme.palette.text.primary,
+                      }}
                     />
                     <Legend />
                     <Area
@@ -314,7 +337,11 @@ const VisualizationsView = React.memo(({
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card sx={{ mb: 3 }}>
+          <Card sx={{ 
+            mb: 3,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>Collection Rate by Batch</Typography>
               <Box sx={{ width: '100%', height: 300 }}>
@@ -324,11 +351,17 @@ const VisualizationsView = React.memo(({
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" domain={[0, 100]} unit="%" />
-                    <YAxis dataKey="batch" type="category" width={100} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                    <XAxis type="number" domain={[0, 100]} unit="%" tick={{ fill: theme.palette.text.secondary }} />
+                    <YAxis dataKey="batch" type="category" width={100} tick={{ fill: theme.palette.text.secondary }} />
                     <RechartsTooltip
                       formatter={(value) => `${Math.round(value)}%`}
+                      contentStyle={{
+                        backgroundColor: theme.palette.background.paper,
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 8,
+                        color: theme.palette.text.primary,
+                      }}
                     />
                     <Legend />
                     <Bar

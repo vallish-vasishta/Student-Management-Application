@@ -47,6 +47,17 @@ const api = {
     }
   },
 
+  // Change password
+  changePassword: async (passwordData) => {
+    try {
+      const response = await axios.post(`${API_URL}/auth/change-password`, passwordData);
+      return response.data;
+    } catch (error) {
+      console.error('Error changing password:', error);
+      throw error;
+    }
+  },
+
   // Get all students
   getStudents: async () => {
     try {

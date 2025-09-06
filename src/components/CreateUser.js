@@ -14,7 +14,8 @@ import {
   CircularProgress,
   IconButton,
   Divider,
-  Grid
+  Grid,
+  useTheme
 } from '@mui/material';
 import { 
   Add as AddIcon, 
@@ -28,6 +29,7 @@ import {
 import api from '../services/api';
 
 const CreateUser = ({ onClose, onSuccess }) => {
+  const theme = useTheme();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -139,21 +141,21 @@ const CreateUser = ({ onClose, onSuccess }) => {
         alignItems: 'center', 
         mb: 3,
         pb: 2,
-        borderBottom: '1px solid #e0e0e0'
+        borderBottom: `1px solid ${theme.palette.divider}`
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <PersonIcon sx={{ mr: 2, color: 'primary.main', fontSize: 28 }} />
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: '#333' }}>
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
             Create New User
           </Typography>
         </Box>
         <IconButton
           onClick={handleClose}
           sx={{
-            color: '#666',
+            color: theme.palette.text.secondary,
             '&:hover': {
-              backgroundColor: '#f5f5f5',
-              color: '#333'
+              backgroundColor: theme.palette.action.hover,
+              color: theme.palette.text.primary
             }
           }}
         >
@@ -165,9 +167,11 @@ const CreateUser = ({ onClose, onSuccess }) => {
       <Paper sx={{ 
         p: 4, 
         borderRadius: 3,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-        background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
-        border: '1px solid #e8e8e8'
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 4px 20px rgba(0,0,0,0.3)'
+          : '0 4px 20px rgba(0,0,0,0.1)',
+        background: theme.palette.background.paper,
+        border: `1px solid ${theme.palette.divider}`
       }}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
@@ -378,17 +382,18 @@ const CreateUser = ({ onClose, onSuccess }) => {
                 borderRadius: 2,
                 px: 4,
                 py: 1.5,
-                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                background: theme.palette.primary.main,
                 textTransform: 'none',
                 fontSize: '1rem',
                 fontWeight: 600,
-                boxShadow: '0 4px 15px rgba(25, 118, 210, 0.3)',
+                boxShadow: `0 4px 15px ${theme.palette.primary.main}30`,
                 '&:hover': {
-                  background: 'linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)',
-                  boxShadow: '0 6px 20px rgba(25, 118, 210, 0.4)',
+                  background: theme.palette.primary.dark,
+                  boxShadow: `0 6px 20px ${theme.palette.primary.main}40`,
                 },
                 '&:disabled': {
-                  background: '#ccc',
+                  background: theme.palette.action.disabledBackground,
+                  color: theme.palette.action.disabled,
                   boxShadow: 'none',
                 }
               }}

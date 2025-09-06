@@ -92,6 +92,9 @@ import ListUsers from './ListUsers';
 import VisualizationsView from './VisualizationsView';
 import AttendanceView from './AttendanceView';
 import DetailedView from './DetailedView';
+import MyProfile from './MyProfile';
+import Settings from './Settings';
+import { useTheme as useThemeContext } from '../contexts/ThemeContext';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
@@ -101,13 +104,7 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-
-
-
-
-
-
-const Logo = () => (
+const Logo = ({ theme, isDark }) => (
   <Box
     sx={{
       display: 'flex',
@@ -115,8 +112,8 @@ const Logo = () => (
       justifyContent: 'center',
       py: 3,
       px: 2,
-      background: '#FFFFFF',
-      borderBottom: '1px solid #E5E7EB',
+      background: theme.palette.background.paper,
+      borderBottom: `1px solid ${theme.palette.divider}`,
       textAlign: 'center',
     }}
   >
@@ -124,7 +121,7 @@ const Logo = () => (
       <MusicNote 
         sx={{ 
           fontSize: 32, 
-          color: '#6366F1',
+          color: theme.palette.primary.main,
         }} 
       />
       <Box>
@@ -132,7 +129,7 @@ const Logo = () => (
           variant="h6" 
           sx={{ 
             fontWeight: 600,
-            color: '#111827',
+            color: theme.palette.text.primary,
             lineHeight: 1.2,
           }}
         >
@@ -142,7 +139,7 @@ const Logo = () => (
           variant="caption" 
           sx={{ 
             display: 'block',
-            color: '#6B7280',
+            color: theme.palette.text.secondary,
             fontWeight: 500,
           }}
         >
@@ -508,6 +505,7 @@ function isValidDateString(date) {
 const FeesDashboard = ({ initialTab }) => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const { isDark } = useThemeContext();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   // Add user role state
@@ -645,6 +643,9 @@ const FeesDashboard = ({ initialTab }) => {
   const [anchorElProfile, setAnchorElProfile] = useState(null);
   const [openCreateUserDialog, setOpenCreateUserDialog] = useState(false);
   const [openListUsersDialog, setOpenListUsersDialog] = useState(false);
+  const [openProfileDialog, setOpenProfileDialog] = useState(false);
+  const [profileFromSettings, setProfileFromSettings] = useState(false);
+  const [openSettingsDialog, setOpenSettingsDialog] = useState(false);
   const sessionTimeoutRef = useRef(null);
   const warningTimeoutRef = useRef(null);
 
@@ -988,10 +989,10 @@ const FeesDashboard = ({ initialTab }) => {
   const drawer = (
     <Box sx={{ 
       overflow: 'auto',
-      background: '#FFFFFF',
+      background: theme.palette.background.paper,
       height: '100%'
     }}>
-      <Logo />
+      <Logo theme={theme} isDark={isDark} />
       <Divider />
       <List sx={{ px: 1, py: 1 }}>
         {userRole === 'admin' && (
@@ -1005,17 +1006,17 @@ const FeesDashboard = ({ initialTab }) => {
                 mx: 1,
                 mb: 0.5,
                 '&.Mui-selected': {
-                  backgroundColor: '#6366F1',
-                  color: 'white',
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
                   '&:hover': {
-                    backgroundColor: '#4F46E5',
+                    backgroundColor: theme.palette.primary.dark,
                   },
                   '& .MuiListItemIcon-root': {
-                    color: 'white',
+                    color: theme.palette.primary.contrastText,
                   },
                 },
                 '&:hover': {
-                  backgroundColor: '#F3F4F6',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F3F4F6',
                 },
               }}
             >
@@ -1036,17 +1037,17 @@ const FeesDashboard = ({ initialTab }) => {
                 mx: 1,
                 mb: 0.5,
                 '&.Mui-selected': {
-                  backgroundColor: '#6366F1',
-                  color: 'white',
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
                   '&:hover': {
-                    backgroundColor: '#4F46E5',
+                    backgroundColor: theme.palette.primary.dark,
                   },
                   '& .MuiListItemIcon-root': {
-                    color: 'white',
+                    color: theme.palette.primary.contrastText,
                   },
                 },
                 '&:hover': {
-                  backgroundColor: '#F3F4F6',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F3F4F6',
                 },
               }}
             >
@@ -1067,17 +1068,17 @@ const FeesDashboard = ({ initialTab }) => {
                 mx: 1,
                 mb: 0.5,
                 '&.Mui-selected': {
-                  backgroundColor: '#6366F1',
-                  color: 'white',
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
                   '&:hover': {
-                    backgroundColor: '#4F46E5',
+                    backgroundColor: theme.palette.primary.dark,
                   },
                   '& .MuiListItemIcon-root': {
-                    color: 'white',
+                    color: theme.palette.primary.contrastText,
                   },
                 },
                 '&:hover': {
-                  backgroundColor: '#F3F4F6',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F3F4F6',
                 },
               }}
             >
@@ -1098,17 +1099,17 @@ const FeesDashboard = ({ initialTab }) => {
                 mx: 1,
                 mb: 0.5,
                 '&.Mui-selected': {
-                  backgroundColor: '#6366F1',
-                  color: 'white',
+                  backgroundColor: theme.palette.primary.main,
+                  color: theme.palette.primary.contrastText,
                   '&:hover': {
-                    backgroundColor: '#4F46E5',
+                    backgroundColor: theme.palette.primary.dark,
                   },
                   '& .MuiListItemIcon-root': {
-                    color: 'white',
+                    color: theme.palette.primary.contrastText,
                   },
                 },
                 '&:hover': {
-                  backgroundColor: '#F3F4F6',
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#F3F4F6',
                 },
               }}
             >
@@ -1166,7 +1167,7 @@ const FeesDashboard = ({ initialTab }) => {
           justifyContent: 'center', 
           alignItems: 'center', 
           height: '100%',
-          background: '#F9FAFB',
+          background: isDark ? 'transparent' : '#F9FAFB',
         }}>
           <Box sx={{ 
             backgroundColor: '#6366F1',
@@ -1192,7 +1193,7 @@ const FeesDashboard = ({ initialTab }) => {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100%',
-          background: '#F9FAFB',
+          background: isDark ? 'transparent' : '#F9FAFB',
         }}>
           <Card sx={{ 
             maxWidth: 400,
@@ -1214,7 +1215,7 @@ const FeesDashboard = ({ initialTab }) => {
         return (
           <Box sx={{ 
             p: 3,
-            background: '#F9FAFB',
+            background: isDark ? 'transparent' : '#F9FAFB',
             minHeight: '100%'
           }}>
             <DetailedView 
@@ -1234,7 +1235,7 @@ const FeesDashboard = ({ initialTab }) => {
         return (
           <Box sx={{ 
             p: 3,
-            background: '#F9FAFB',
+            background: isDark ? 'transparent' : '#F9FAFB',
             minHeight: '100%'
           }}>
             <VisualizationsView 
@@ -1249,7 +1250,7 @@ const FeesDashboard = ({ initialTab }) => {
         return (
           <Box sx={{ 
             p: 3,
-            background: '#F9FAFB',
+            background: isDark ? 'transparent' : '#F9FAFB',
             minHeight: '100%'
           }}>
             <AttendanceView 
@@ -1268,7 +1269,7 @@ const FeesDashboard = ({ initialTab }) => {
         return (
           <Box sx={{ 
             p: 3,
-            background: '#F9FAFB',
+            background: isDark ? 'transparent' : '#F9FAFB',
             minHeight: '100%'
           }}>
             <StudentsView onAddStudent={handleAddStudent} />
@@ -1278,7 +1279,7 @@ const FeesDashboard = ({ initialTab }) => {
         return (
           <Box sx={{ 
             p: 3,
-            background: '#F9FAFB',
+            background: isDark ? 'transparent' : '#F9FAFB',
             minHeight: '100%'
           }}>
             <BatchesView />
@@ -1288,7 +1289,7 @@ const FeesDashboard = ({ initialTab }) => {
         return (
           <Box sx={{ 
             p: 3,
-            background: '#F9FAFB',
+            background: isDark ? 'transparent' : '#F9FAFB',
             minHeight: '100%'
           }}>
             <DetailedView allBatches={allBatches} feesData={fees} fetchFees={fetchFees} setSnackbar={setSnackbar} />
@@ -1375,6 +1376,10 @@ const FeesDashboard = ({ initialTab }) => {
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
+          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          boxShadow: 'none',
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between' }}>
@@ -1434,13 +1439,19 @@ const FeesDashboard = ({ initialTab }) => {
           />
         </MenuItem>
         <Divider />
-        <MenuItem>
+        <MenuItem onClick={() => {
+          setAnchorElProfile(null);
+          setOpenProfileDialog(true);
+        }}>
           <ListItemIcon>
             <AccountCircleIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="My Profile" />
         </MenuItem>
-        <MenuItem>
+        <MenuItem onClick={() => {
+          setAnchorElProfile(null);
+          setOpenSettingsDialog(true);
+        }}>
           <ListItemIcon>
             <SettingsIcon fontSize="small" />
           </ListItemIcon>
@@ -1485,7 +1496,12 @@ const FeesDashboard = ({ initialTab }) => {
           }}
           sx={{
             display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              backgroundColor: theme.palette.background.paper,
+              borderRight: `1px solid ${theme.palette.divider}`,
+            },
           }}
         >
           {drawer}
@@ -1494,7 +1510,12 @@ const FeesDashboard = ({ initialTab }) => {
           variant="permanent"
           sx={{
             display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              backgroundColor: theme.palette.background.paper,
+              borderRight: `1px solid ${theme.palette.divider}`,
+            },
           }}
           open
         >
@@ -1511,7 +1532,7 @@ const FeesDashboard = ({ initialTab }) => {
           mt: '64px',
           height: 'calc(100vh - 64px)',
           overflow: 'auto',
-          background: '#F9FAFB',
+          background: isDark ? 'transparent' : '#F9FAFB',
         }}
       >
         {mainContent()}
@@ -1554,10 +1575,12 @@ const FeesDashboard = ({ initialTab }) => {
         PaperProps={{
           sx: {
             borderRadius: 3,
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+            background: theme.palette.background.paper,
             backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 20px 60px rgba(139, 92, 246, 0.2)',
+            border: `1px solid ${theme.palette.divider}`,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 20px 60px rgba(0, 0, 0, 0.4)'
+              : '0 20px 60px rgba(139, 92, 246, 0.2)',
           }
         }}
       >
@@ -1569,7 +1592,7 @@ const FeesDashboard = ({ initialTab }) => {
           Confirm Logout
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
-          <DialogContentText id="logout-dialog-description" sx={{ color: '#6B7280' }}>
+          <DialogContentText id="logout-dialog-description" sx={{ color: theme.palette.text.secondary }}>
             Are you sure you want to log out? Any unsaved changes will be lost.
           </DialogContentText>
         </DialogContent>
@@ -1578,11 +1601,13 @@ const FeesDashboard = ({ initialTab }) => {
             onClick={handleLogoutCancel}
             variant="outlined"
             sx={{
-              borderColor: '#8B5CF6',
-              color: '#8B5CF6',
+              borderColor: theme.palette.primary.main,
+              color: theme.palette.primary.main,
               '&:hover': {
-                borderColor: '#7C3AED',
-                backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                borderColor: theme.palette.primary.dark,
+                backgroundColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(139, 92, 246, 0.2)'
+                  : 'rgba(139, 92, 246, 0.1)',
               }
             }}
           >
@@ -1596,6 +1621,11 @@ const FeesDashboard = ({ initialTab }) => {
               '&:hover': {
                 background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
                 transform: 'translateY(-1px)',
+              },
+              '&:disabled': {
+                background: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+                transform: 'none',
               }
             }}
           >
@@ -1655,6 +1685,30 @@ const FeesDashboard = ({ initialTab }) => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* My Profile Dialog */}
+      <MyProfile
+        open={openProfileDialog}
+        onClose={() => {
+          setOpenProfileDialog(false);
+          setProfileFromSettings(false);
+        }}
+        fromSettings={profileFromSettings}
+        onBackToSettings={() => {
+          setOpenProfileDialog(false);
+          setOpenSettingsDialog(true);
+        }}
+      />
+
+      {/* Settings Dialog */}
+      <Settings
+        open={openSettingsDialog}
+        onClose={() => setOpenSettingsDialog(false)}
+        onOpenProfile={(fromSettings = false) => {
+          setProfileFromSettings(fromSettings);
+          setOpenProfileDialog(true);
+        }}
+      />
     </Box>
   );
 };

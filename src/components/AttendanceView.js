@@ -30,7 +30,8 @@ import {
   Checkbox,
   CircularProgress,
   IconButton,
-  Tooltip
+  Tooltip,
+  useTheme
 } from '@mui/material';
 import {
   FileDownload as FileDownloadIcon,
@@ -84,6 +85,7 @@ const AttendanceView = React.memo(({
   setIsLoadingAttendance, 
   allBatches = [] 
 }) => {
+  const theme = useTheme();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [selectedBatch, setSelectedBatch] = useState('all');
   const [viewMode, setViewMode] = useState('monthly');
@@ -462,7 +464,11 @@ const AttendanceView = React.memo(({
 
       <Grid container spacing={1} sx={{ mb: 2 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ p: 1 }}>
+          <Card sx={{ 
+            p: 1,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent sx={{ p: '8px !important' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <CalendarIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
@@ -477,7 +483,11 @@ const AttendanceView = React.memo(({
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ p: 1 }}>
+          <Card sx={{ 
+            p: 1,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent sx={{ p: '8px !important' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <PersonIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
@@ -492,7 +502,11 @@ const AttendanceView = React.memo(({
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ p: 1 }}>
+          <Card sx={{ 
+            p: 1,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent sx={{ p: '8px !important' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <PresentIcon sx={{ mr: 1, color: 'success.main', fontSize: '1.2rem' }} />
@@ -510,7 +524,11 @@ const AttendanceView = React.memo(({
           </Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ p: 1 }}>
+          <Card sx={{ 
+            p: 1,
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent sx={{ p: '8px !important' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <AbsentIcon sx={{ mr: 1, color: 'error.main', fontSize: '1.2rem' }} />
@@ -532,16 +550,18 @@ const AttendanceView = React.memo(({
       <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 300px)' }}>
         <Table size="small" stickyHeader>
           <TableHead>
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableRow sx={{ backgroundColor: theme.palette.background.default }}>
               <TableCell sx={{ 
                 minWidth: 150, 
                 maxWidth: 150,
                 position: 'sticky', 
                 left: 0, 
-                backgroundColor: '#f5f5f5', 
+                backgroundColor: theme.palette.background.default, 
                 zIndex: 2,
                 padding: '8px 4px',
-                borderBottom: '2px solid #e0e0e0'
+                borderBottom: `2px solid ${theme.palette.divider}`,
+                color: theme.palette.text.primary,
+                fontWeight: 'bold'
               }}>
                 Student Name
               </TableCell>
@@ -553,11 +573,13 @@ const AttendanceView = React.memo(({
                     minWidth: 28, 
                     maxWidth: 28, 
                     padding: '2px',
-                    border: '1px solid #e0e0e0',
-                    backgroundColor: '#f5f5f5',
+                    border: `1px solid ${theme.palette.divider}`,
+                    backgroundColor: theme.palette.background.default,
                     position: 'sticky',
                     top: 0,
-                    zIndex: 1
+                    zIndex: 1,
+                    color: theme.palette.text.primary,
+                    fontWeight: 'bold'
                   }}
                 >
                   <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 'bold' }}>
@@ -569,11 +591,13 @@ const AttendanceView = React.memo(({
                 minWidth: 60, 
                 maxWidth: 60, 
                 padding: '4px',
-                backgroundColor: '#f5f5f5',
+                backgroundColor: theme.palette.background.default,
                 position: 'sticky',
                 top: 0,
                 zIndex: 1,
-                borderBottom: '2px solid #e0e0e0'
+                borderBottom: `2px solid ${theme.palette.divider}`,
+                color: theme.palette.text.primary,
+                fontWeight: 'bold'
               }}>
                 Rate
               </TableCell>
@@ -588,9 +612,9 @@ const AttendanceView = React.memo(({
                     sx={{ 
                       position: 'sticky', 
                       left: 0, 
-                      backgroundColor: 'white', 
+                      backgroundColor: theme.palette.background.paper, 
                       zIndex: 1,
-                      borderRight: '2px solid #e0e0e0',
+                      borderRight: `2px solid ${theme.palette.divider}`,
                       padding: '8px 4px'
                     }}
                   >
@@ -613,7 +637,7 @@ const AttendanceView = React.memo(({
                          align="center" 
                          sx={{ 
                            padding: '1px',
-                           border: '1px solid #e0e0e0',
+                           border: `1px solid ${theme.palette.divider}`,
                            cursor: 'pointer',
                            backgroundColor: attendance === 'present' ? '#4caf50' : '#f44336',
                            '&:hover': {
@@ -682,7 +706,10 @@ const AttendanceView = React.memo(({
     <>
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={8}>
-          <Card>
+          <Card sx={{ 
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Attendance Trends
@@ -690,17 +717,24 @@ const AttendanceView = React.memo(({
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={getAttendanceHistory()}>
-                    <CartesianGrid strokeDasharray="3 3" />
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                     <XAxis 
                       dataKey="date" 
                       tickFormatter={(date) => format(parseISO(date), 'MMM dd')}
+                      tick={{ fill: theme.palette.text.secondary }}
                     />
-                    <YAxis />
+                    <YAxis tick={{ fill: theme.palette.text.secondary }} />
                     <RechartsTooltip
                       content={({ active, payload, label }) => {
                         if (active && payload && payload.length) {
                           return (
-                            <div style={{ backgroundColor: '#fff', padding: '10px', border: '1px solid #ccc' }}>
+                            <div style={{ 
+                              backgroundColor: theme.palette.background.paper, 
+                              padding: '10px', 
+                              border: `1px solid ${theme.palette.divider}`,
+                              color: theme.palette.text.primary,
+                              borderRadius: 8
+                            }}>
                               <p>{format(parseISO(label), 'MMMM dd, yyyy')}</p>
                               {payload.map((entry, index) => (
                                 <p key={index} style={{ color: entry.color }}>
@@ -742,7 +776,10 @@ const AttendanceView = React.memo(({
           </Card>
         </Grid>
         <Grid item xs={12} md={4}>
-          <Card>
+          <Card sx={{ 
+            background: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Date Range

@@ -33,7 +33,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button
+  Button,
+  useTheme
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -54,6 +55,7 @@ import { format } from 'date-fns';
 import api from '../services/api';
 
 const ListUsers = ({ onClose }) => {
+  const theme = useTheme();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -395,13 +397,15 @@ const ListUsers = ({ onClose }) => {
           p: 4, 
           mb: 4, 
           borderRadius: 3,
-          background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          border: '1px solid #e8e8e8'
+          background: theme.palette.background.paper,
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 20px rgba(0,0,0,0.3)'
+            : '0 4px 20px rgba(0,0,0,0.08)',
+          border: `1px solid ${theme.palette.divider}`
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <FilterIcon sx={{ mr: 2, color: 'primary.main' }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#333' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
               Search & Filter
             </Typography>
           </Box>
@@ -487,8 +491,11 @@ const ListUsers = ({ onClose }) => {
         <Paper sx={{ 
           borderRadius: 3, 
           overflow: 'hidden',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-          border: '1px solid #e8e8e8'
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 8px 32px rgba(0,0,0,0.3)'
+            : '0 8px 32px rgba(0,0,0,0.1)',
+          border: `1px solid ${theme.palette.divider}`,
+          background: theme.palette.background.paper
         }}>
           <TableContainer>
             <Table>
@@ -534,11 +541,13 @@ const ListUsers = ({ onClose }) => {
                         sx={{ 
                           transition: 'all 0.3s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(102, 126, 234, 0.04)',
+                            backgroundColor: theme.palette.mode === 'dark' 
+                              ? 'rgba(102, 126, 234, 0.1)'
+                              : 'rgba(102, 126, 234, 0.04)',
                             transform: 'scale(1.01)',
                           },
                           '& td': {
-                            borderBottom: '1px solid #f0f0f0',
+                            borderBottom: `1px solid ${theme.palette.divider}`,
                             padding: '16px 24px'
                           }
                         }}

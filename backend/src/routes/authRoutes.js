@@ -63,6 +63,67 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Change password route
+router.post('/change-password', async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
+
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'User ID, current password, and new password are required' 
+      });
+    }
+
+    // Find user by ID
+    const user = await User.findOne({ 
+      where: { 
+        id: userId,
+        is_active: true 
+      } 
+    });
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    
+    if (!isCurrentPasswordValid) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Current password is incorrect' 
+      });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await user.update({
+      password: hashedNewPassword,
+      updatedAt: new Date()
+    });
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error' 
+    });
+  }
+});
+
 // Get all users (admin only)
 router.get('/users', async (req, res) => {
   try {
