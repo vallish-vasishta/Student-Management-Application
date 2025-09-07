@@ -26,23 +26,16 @@ import {
   InputAdornment
 } from '@mui/material';
 import {
-  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  CheckCircle as CheckCircleIcon,
-  FileDownload as FileDownloadIcon,
   Search as SearchIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
-import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 import api from '../services/api';
 
-const DetailedView = React.memo(({ 
+const FeeDashboard = React.memo(({ 
   students = [], 
   onEdit, 
-  onMarkAsPaid, 
   allBatches = [], 
   feesData = [], 
   fetchFees, 
@@ -69,9 +62,7 @@ const DetailedView = React.memo(({
     studentId: '',
     feesMonth: format(new Date(), 'yyyy-MM'),
     amount: '',
-    status: 'Unpaid',
-    paymentDate: format(new Date(), 'yyyy-MM-dd'),
-    paymentMode: 'Cash'
+    status: 'Unpaid'
   });
 
   // Generate all months for the past year
@@ -109,7 +100,16 @@ const DetailedView = React.memo(({
       .map(fee => {
         // Find the corresponding student
         const student = students.find(s => s.id === fee.studentId);
+        
+        console.log('Processing fee:', {
+          feeStudentId: fee.studentId,
+          feeStudentIdType: typeof fee.studentId,
+          foundStudent: student,
+          allStudentIds: students.map(s => ({ id: s.id, name: s.name }))
+        });
+        
         if (!student) {
+          console.warn('Student not found for fee:', fee);
           return null; // Skip if student not found
         }
         
@@ -189,35 +189,6 @@ const DetailedView = React.memo(({
     }
   };
 
-  const handleExport = async (format) => {
-    try {
-      const data = filteredData.map(item => ({
-        'Student Name': item.student.name || '',
-        'Batch': getBatchName(item.student) || '',
-        'Fees Month': item.fee.feesMonth || '',
-        'Amount': item.fee.amount || 0,
-        'Status': item.fee.status || '',
-        'Payment Date': item.fee.paymentDate || '',
-        'Payment Mode': item.fee.paymentMode || ''
-      }));
-
-      if (format === 'excel') {
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Fees Data');
-        XLSX.writeFile(wb, 'fees_data.xlsx');
-      } else if (format === 'pdf') {
-        const doc = new jsPDF();
-        doc.autoTable({
-          head: [['Student Name', 'Batch', 'Fees Month', 'Amount', 'Status', 'Payment Date', 'Payment Mode']],
-          body: data.map(row => Object.values(row))
-        });
-        doc.save('fees_data.pdf');
-      }
-    } catch (error) {
-      console.error('Error exporting data:', error);
-    }
-  };
 
   const handleAddFee = async (feeData) => {
     try {
@@ -228,9 +199,7 @@ const DetailedView = React.memo(({
         studentId: '',
         feesMonth: format(new Date(), 'yyyy-MM'),
         amount: '',
-        status: 'Unpaid',
-        paymentDate: format(new Date(), 'yyyy-MM-dd'),
-        paymentMode: 'Cash'
+        status: 'Unpaid'
       });
     } catch (error) {
       console.error('Error adding fee:', error);
@@ -238,7 +207,8 @@ const DetailedView = React.memo(({
   };
 
   const handleEditFee = async (feeData) => {
-    // We'll try to update first, and if that fails, we'll create a new record
+    console.log('handleEditFee called with:', feeData);
+    console.log('selectedFee:', selectedFee);
     
     try {
       if (!selectedFee) {
@@ -246,19 +216,27 @@ const DetailedView = React.memo(({
         return;
       }
 
-      // Convert month format to full date format for database
-      const feeMonthDate = feeData.feesMonth.includes('-01') ? feeData.feesMonth : `${feeData.feesMonth}-01`;
-      
+      // Use the original feesMonth from the database to ensure exact match
+      // Only update the amount and status, keep the original feesMonth
       const updatedFeeData = {
-        feesMonth: feeMonthDate,
+        feesMonth: selectedFee.fee.feesMonth, // Use original feesMonth from database
         amount: Number(feeData.amount),
         status: feeData.status,
         paymentDate: feeData.status === 'Paid' ? feeData.paymentDate : null,
         paymentMode: feeData.status === 'Paid' ? feeData.paymentMode : null
       };
       
+      console.log('Original fee data from database:', selectedFee.fee);
+      console.log('Using original feesMonth for update:', selectedFee.fee.feesMonth);
+      console.log('Student ID being used:', selectedFee.fee.studentId);
+      
+      console.log('Updating fee with data:', {
+        studentId: selectedFee.fee.studentId,
+        updatedFeeData
+      });
+      
       // Update the fee record in the database
-      await api.updateFees(selectedFee.studentId, updatedFeeData);
+      await api.updateFees(selectedFee.fee.studentId, updatedFeeData);
       
       // Refresh the fees data
       await fetchFees();
@@ -270,9 +248,7 @@ const DetailedView = React.memo(({
         studentId: '',
         feesMonth: format(new Date(), 'yyyy-MM'),
         amount: '',
-        status: 'Unpaid',
-        paymentDate: format(new Date(), 'yyyy-MM-dd'),
-        paymentMode: 'Cash'
+        status: 'Unpaid'
       });
       
       // Show success message
@@ -285,6 +261,13 @@ const DetailedView = React.memo(({
       }
     } catch (error) {
       console.error('Error editing fee:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        studentId: selectedFee?.fee?.studentId,
+        feeData: feeData
+      });
       
       // Show error message
       if (setSnackbar) {
@@ -299,7 +282,7 @@ const DetailedView = React.memo(({
 
   const handleDeleteFee = async () => {
     try {
-      await api.deleteFee(selectedFee.studentId, selectedFee.feesMonth);
+      await api.deleteFee(selectedFee.fee.studentId, selectedFee.fee.feesMonth);
       await fetchFees(); // Refresh fees data
       setOpenDeleteDialog(false);
       setSelectedFee(null);
@@ -308,27 +291,28 @@ const DetailedView = React.memo(({
     }
   };
 
-  const handleMarkAsPaid = async (fee) => {
-    try {
-      await onMarkAsPaid(fee);
-      await fetchFees(); // Refresh fees data after marking as paid
-    } catch (error) {
-      console.error('Error marking fee as paid:', error);
-    }
-  };
 
-  const handleEditClick = (fee) => {
-    setSelectedFee(fee);
+  const handleEditClick = (item) => {
+    setSelectedFee(item);
     // Convert database date format (YYYY-MM-DD) to month format (YYYY-MM) for editing
-    const formattedMonth = fee.feesMonth ? fee.feesMonth.substring(0, 7) : format(new Date(), 'yyyy-MM');
+    const formattedMonth = item.fee.feesMonth ? item.fee.feesMonth.substring(0, 7) : format(new Date(), 'yyyy-MM');
+    
+    console.log('Edit click - Complete item structure:', item);
+    console.log('Edit click - Fee data:', item.fee);
+    console.log('Edit click - Student data:', item.student);
+    console.log('Edit click - Original fee data:', {
+      originalFeesMonth: item.fee.feesMonth,
+      formattedMonth: formattedMonth,
+      studentId: item.fee.studentId,
+      amount: item.fee.amount,
+      status: item.fee.status
+    });
     
     setNewFee({
-      studentId: fee.studentId,
+      studentId: item.fee.studentId,
       feesMonth: formattedMonth,
-      amount: fee.amount,
-      status: fee.status,
-      paymentDate: fee.paymentDate || format(new Date(), 'yyyy-MM-dd'),
-      paymentMode: fee.paymentMode || 'Cash'
+      amount: item.fee.amount,
+      status: item.fee.status
     });
     setOpenEditDialog(true);
   };
@@ -391,62 +375,6 @@ const DetailedView = React.memo(({
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 1.5, 
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            height: '100%',
-            minHeight: '56px'
-          }}>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setOpenAddDialog(true)}
-              sx={{ 
-                minWidth: '120px',
-                height: '40px',
-                textTransform: 'none',
-                fontWeight: 600,
-                borderRadius: '8px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-              }}
-            >
-              Add Fee
-            </Button>
-
-            <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
-              onClick={() => handleExport('excel')}
-              sx={{ 
-                minWidth: '140px',
-                height: '40px',
-                textTransform: 'none',
-                borderRadius: '8px',
-                borderWidth: '1.5px'
-              }}
-            >
-              Export Excel
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<FileDownloadIcon />}
-              onClick={() => handleExport('pdf')}
-              sx={{ 
-                minWidth: '140px',
-                height: '40px',
-                textTransform: 'none',
-                borderRadius: '8px',
-                borderWidth: '1.5px'
-              }}
-            >
-              Export PDF
-            </Button>
-          </Box>
-        </Grid>
       </Grid>
 
       <TableContainer component={Paper}>
@@ -466,19 +394,13 @@ const DetailedView = React.memo(({
               <TableCell onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>
                 Status {sortField === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
               </TableCell>
-              <TableCell onClick={() => handleSort('paymentDate')} style={{ cursor: 'pointer' }}>
-                Payment Date {sortField === 'paymentDate' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableCell>
-              <TableCell onClick={() => handleSort('paymentMode')} style={{ cursor: 'pointer' }}>
-                Payment Mode {sortField === 'paymentMode' && (sortDirection === 'asc' ? '↑' : '↓')}
-              </TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={5} align="center">
                   {selectedBatch !== 'all' ? `No students found in batch "${selectedBatch}"` : `No students found for ${format(parseISO(selectedMonth), 'MMMM yyyy')}`}
                 </TableCell>
               </TableRow>
@@ -496,30 +418,18 @@ const DetailedView = React.memo(({
                     size="small"
                   />
                 </TableCell>
-                  <TableCell>{item.fee.paymentDate || '-'}</TableCell>
-                  <TableCell>{item.fee.paymentMode || '-'}</TableCell>
                   <TableCell>
                       <IconButton 
                         size="small" 
-                      onClick={() => handleEditClick(item.fee)}
+                      onClick={() => handleEditClick(item)}
                       sx={{ mr: 1 }}
                       >
                         <EditIcon />
                       </IconButton>
-                    {item.fee.status !== 'Paid' && (
-                        <IconButton 
-                          size="small"
-                        onClick={() => handleMarkAsPaid(item.fee)}
-                          color="success"
-                        sx={{ mr: 1 }}
-                        >
-                          <CheckCircleIcon />
-                        </IconButton>
-                    )}
                     <IconButton
                       size="small"
                       onClick={() => {
-                        setSelectedFee(item.fee);
+                        setSelectedFee(item);
                         setOpenDeleteDialog(true);
                       }}
                       color="error"
@@ -561,16 +471,22 @@ const DetailedView = React.memo(({
                 </FormControl>
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Fees Month"
-                  name="feesMonth"
-                  type="month"
-                  value={newFee.feesMonth}
-                  onChange={(e) => setNewFee(prev => ({ ...prev, feesMonth: e.target.value }))}
-                  required
-                  InputLabelProps={{ shrink: true }}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Fees Month</InputLabel>
+                  <Select
+                    name="feesMonth"
+                    value={newFee.feesMonth}
+                    onChange={(e) => setNewFee(prev => ({ ...prev, feesMonth: e.target.value }))}
+                    label="Fees Month"
+                    required
+                  >
+                    {availableMonths.map((month) => (
+                      <MenuItem key={month} value={month}>
+                        {format(parseISO(month), 'MMMM yyyy')}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item xs={12}>
                 <TextField
@@ -600,38 +516,6 @@ const DetailedView = React.memo(({
                   </Select>
                 </FormControl>
               </Grid>
-              {newFee.status === 'Paid' && (
-                <>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Payment Date"
-                      name="paymentDate"
-                      type="date"
-                      value={newFee.paymentDate}
-                      onChange={(e) => setNewFee(prev => ({ ...prev, paymentDate: e.target.value }))}
-                      required
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel>Payment Mode</InputLabel>
-                      <Select
-                        name="paymentMode"
-                        value={newFee.paymentMode}
-                        onChange={(e) => setNewFee(prev => ({ ...prev, paymentMode: e.target.value }))}
-                        label="Payment Mode"
-                      >
-                        <MenuItem value="Cash">Cash</MenuItem>
-                        <MenuItem value="UPI">UPI</MenuItem>
-                        <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
-                        <MenuItem value="Cheque">Cheque</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </>
-              )}
             </Grid>
           </DialogContent>
           <DialogActions>
@@ -648,16 +532,20 @@ const DetailedView = React.memo(({
         <DialogTitle>Edit Fee Record</DialogTitle>
         <form onSubmit={(e) => {
           e.preventDefault();
+          console.log('Edit form submitted with data:', newFee);
+          console.log('Selected fee:', selectedFee);
+          console.log('About to call handleEditFee');
           handleEditFee(newFee);
+          console.log('handleEditFee call completed');
         }}>
           <DialogContent>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>
-                  Student: {selectedFee?.Student?.name || 'N/A'}
+                  Student: {selectedFee?.student?.name || 'N/A'}
                 </Typography>
                 <Typography variant="subtitle1" gutterBottom>
-                  Batch: {getBatchName(selectedFee?.Student)}
+                  Batch: {getBatchName(selectedFee?.student)}
                 </Typography>
               </Grid>
               <Grid item xs={12}>
@@ -700,43 +588,16 @@ const DetailedView = React.memo(({
                   </Select>
                 </FormControl>
               </Grid>
-              {newFee.status === 'Paid' && (
-                <>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Payment Date"
-                      name="paymentDate"
-                      type="date"
-                      value={newFee.paymentDate}
-                      onChange={(e) => setNewFee(prev => ({ ...prev, paymentDate: e.target.value }))}
-                      required
-                      InputLabelProps={{ shrink: true }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <FormControl fullWidth>
-                      <InputLabel>Payment Mode</InputLabel>
-                      <Select
-                        name="paymentMode"
-                        value={newFee.paymentMode}
-                        onChange={(e) => setNewFee(prev => ({ ...prev, paymentMode: e.target.value }))}
-                        label="Payment Mode"
-                      >
-                        <MenuItem value="Cash">Cash</MenuItem>
-                        <MenuItem value="UPI">UPI</MenuItem>
-                        <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
-                        <MenuItem value="Cheque">Cheque</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </>
-              )}
             </Grid>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
-            <Button type="submit" variant="contained" color="primary">
+            <Button 
+              type="submit" 
+              variant="contained" 
+              color="primary"
+              onClick={() => console.log('Update Fee button clicked')}
+            >
               Update Fee
             </Button>
           </DialogActions>
@@ -755,7 +616,7 @@ const DetailedView = React.memo(({
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description">
-            Are you sure you want to delete the fee record for {selectedFee?.Student?.name} for the month of {selectedFee?.feesMonth}?
+            Are you sure you want to delete the fee record for {selectedFee?.student?.name} for the month of {selectedFee?.fee?.feesMonth}?
             This action cannot be undone.
           </DialogContentText>
         </DialogContent>
@@ -770,4 +631,4 @@ const DetailedView = React.memo(({
   );
 });
 
-export default DetailedView; 
+export default FeeDashboard; 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './components/Login';
-import FeesDashboard from './components/FeesDashboard';
+import MainApp from './components/MainApp';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -12,7 +12,7 @@ const DashboardWrapper = () => {
   const searchParams = new URLSearchParams(location.search);
   const tab = searchParams.get('tab');
   
-  return <FeesDashboard initialTab={tab} />;
+  return <MainApp initialTab={tab} />;
 };
 
 const PrivateRoute = ({ children }) => {

@@ -502,7 +502,7 @@ function isValidDateString(date) {
 
 
 
-const FeesDashboard = ({ initialTab }) => {
+const MainApp = ({ initialTab }) => {
   const navigate = useNavigate();
   const theme = useTheme();
   const { isDark } = useThemeContext();
@@ -826,6 +826,11 @@ const FeesDashboard = ({ initialTab }) => {
         paymentDate: null,
         paymentMode: null
       };
+      
+      console.log('Creating fee for new student:', {
+        createdStudent: createdStudent,
+        feeData: feeData
+      });
       
       try {
         await api.addFee(feeData);
@@ -1692,4 +1697,4 @@ const FeesDashboard = ({ initialTab }) => {
   );
 };
 
-export default FeesDashboard; 
+export default MainApp; 

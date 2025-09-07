@@ -87,7 +87,11 @@ const AttendanceView = React.memo(({
 }) => {
   const theme = useTheme();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
-  const [selectedBatch, setSelectedBatch] = useState('all');
+  const [selectedBatch, setSelectedBatch] = useState(() => {
+    // Set default to first batch if available, otherwise 'all'
+    const batches = allBatches.map(batch => batch.name || batch).filter(Boolean);
+    return batches.length > 0 ? batches[0] : 'all';
+  });
   const [viewMode, setViewMode] = useState('monthly');
   const [dateRange, setDateRange] = useState({
     start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
@@ -162,6 +166,15 @@ const AttendanceView = React.memo(({
   // Memoize handleAttendanceChange function
   const handleAttendanceChange = useCallback(async (studentId, day, status) => {
     const date = format(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day), 'yyyy-MM-dd');
+    const attendanceDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // Set to end of today to allow marking for today
+    
+    // Prevent marking attendance for future dates
+    if (attendanceDate > today) {
+      console.warn('Cannot mark attendance for future dates');
+      return;
+    }
     
     setIsLoadingAttendance(true);
     try {
@@ -315,8 +328,7 @@ const AttendanceView = React.memo(({
         'Name': student.name,
         'Batch': student.batch?.name || student.batch || '',
         'Present Days': studentStats.present,
-        'Total Days': studentStats.total,
-        'Attendance Rate': `${studentStats.percentage}%`
+        'Total Days': studentStats.total
       };
       
       // Add individual day attendance
@@ -354,8 +366,7 @@ const AttendanceView = React.memo(({
       const row = [
         student.name,
         student.batch?.name || student.batch || '',
-        `${studentStats.present}/${studentStats.total}`,
-        `${studentStats.percentage}%`
+        `${studentStats.present}/${studentStats.total}`
       ];
       
       // Add individual day attendance
@@ -368,7 +379,7 @@ const AttendanceView = React.memo(({
     });
 
     // Create table headers
-    const headers = ['Name', 'Batch', 'Present/Total', 'Rate'];
+    const headers = ['Name', 'Batch', 'Present/Total'];
     for (let day = 1; day <= daysInMonth; day++) {
       headers.push(day.toString());
     }
@@ -389,9 +400,23 @@ const AttendanceView = React.memo(({
 
   const getAttendanceHistory = () => {
     const history = [];
-    let currentDate = parseISO(dateRange.start);
     
-    while (!isAfter(currentDate, parseISO(dateRange.end))) {
+    // Validate date range before processing
+    if (!dateRange.start || !dateRange.end || !isValidDateString(dateRange.start) || !isValidDateString(dateRange.end)) {
+      console.warn('Invalid date range:', dateRange);
+      return history;
+    }
+    
+    let currentDate = parseISO(dateRange.start);
+    const endDate = parseISO(dateRange.end);
+    
+    // Additional validation for parsed dates
+    if (isNaN(currentDate.getTime()) || isNaN(endDate.getTime())) {
+      console.warn('Invalid parsed dates:', { start: dateRange.start, end: dateRange.end });
+      return history;
+    }
+    
+    while (!isAfter(currentDate, endDate)) {
       const dateStr = format(currentDate, 'yyyy-MM-dd');
       const dayData = attendanceData[dateStr] || {};
       
@@ -587,20 +612,6 @@ const AttendanceView = React.memo(({
                   </Typography>
                 </TableCell>
               ))}
-              <TableCell align="center" sx={{ 
-                minWidth: 60, 
-                maxWidth: 60, 
-                padding: '4px',
-                backgroundColor: theme.palette.background.default,
-                position: 'sticky',
-                top: 0,
-                zIndex: 1,
-                borderBottom: `2px solid ${theme.palette.divider}`,
-                color: theme.palette.text.primary,
-                fontWeight: 'bold'
-              }}>
-                Rate
-              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -645,7 +656,14 @@ const AttendanceView = React.memo(({
                              opacity: 0.8
                            }
                          }}
-                         onClick={() => handleAttendanceChange(student.id, day, attendance === 'present' ? 'absent' : 'present')}
+                         onClick={() => {
+                          const attendanceDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                          const today = new Date();
+                          today.setHours(23, 59, 59, 999);
+                          if (attendanceDate <= today) {
+                            handleAttendanceChange(student.id, day, attendance === 'present' ? 'absent' : 'present');
+                          }
+                        }}
                        >
                          <Tooltip title={`${format(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day), 'MMM dd, yyyy')} - Click to mark ${attendance === 'present' ? 'absent' : 'present'}`}>
                            <Box
@@ -669,27 +687,12 @@ const AttendanceView = React.memo(({
                        </TableCell>
                     );
                   })}
-                  <TableCell align="center" sx={{ padding: '4px' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography variant="body2" sx={{ mr: 1, fontSize: '0.75rem' }}>
-                        {studentStats.percentage}%
-                      </Typography>
-                      <Box sx={{ width: 40 }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={studentStats.percentage}
-                          color={studentStats.percentage >= 75 ? 'success' : studentStats.percentage >= 50 ? 'warning' : 'error'}
-                          sx={{ height: 6, borderRadius: 3 }}
-                        />
-                      </Box>
-                    </Box>
-                  </TableCell>
                 </TableRow>
               );
             })}
             {filteredStudents.length === 0 && (
               <TableRow>
-                <TableCell colSpan={daysInMonth + 2} align="center" sx={{ py: 3 }}>
+                <TableCell colSpan={daysInMonth + 1} align="center" sx={{ py: 3 }}>
                   <Typography variant="body1" color="text.secondary">
                     No students found matching your search criteria
                   </Typography>
@@ -720,7 +723,17 @@ const AttendanceView = React.memo(({
                     <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                     <XAxis 
                       dataKey="date" 
-                      tickFormatter={(date) => format(parseISO(date), 'MMM dd')}
+                      tickFormatter={(date) => {
+                        try {
+                          if (!date || !isValidDateString(date)) return 'Invalid Date';
+                          const parsedDate = parseISO(date);
+                          if (isNaN(parsedDate.getTime())) return 'Invalid Date';
+                          return format(parsedDate, 'MMM dd');
+                        } catch (error) {
+                          console.warn('Error formatting date:', date, error);
+                          return 'Invalid Date';
+                        }
+                      }}
                       tick={{ fill: theme.palette.text.secondary }}
                     />
                     <YAxis tick={{ fill: theme.palette.text.secondary }} />
@@ -735,7 +748,17 @@ const AttendanceView = React.memo(({
                               color: theme.palette.text.primary,
                               borderRadius: 8
                             }}>
-                              <p>{format(parseISO(label), 'MMMM dd, yyyy')}</p>
+                              <p>{(() => {
+                                try {
+                                  if (!label || !isValidDateString(label)) return 'Invalid Date';
+                                  const parsedDate = parseISO(label);
+                                  if (isNaN(parsedDate.getTime())) return 'Invalid Date';
+                                  return format(parsedDate, 'MMMM dd, yyyy');
+                                } catch (error) {
+                                  console.warn('Error formatting tooltip date:', label, error);
+                                  return 'Invalid Date';
+                                }
+                              })()}</p>
                               {payload.map((entry, index) => (
                                 <p key={index} style={{ color: entry.color }}>
                                   {entry.name}: {entry.value}%

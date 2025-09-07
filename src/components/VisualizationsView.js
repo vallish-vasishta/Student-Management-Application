@@ -173,7 +173,13 @@ const VisualizationsView = React.memo(({
 
     // Convert to array and sort by date
     return Object.values(monthlyData)
-      .sort((a, b) => new Date(a.month) - new Date(b.month))
+      .filter(item => item.month && !isNaN(new Date(item.month).getTime()))
+      .sort((a, b) => {
+        const dateA = new Date(a.month);
+        const dateB = new Date(b.month);
+        if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+        return dateA - dateB;
+      })
       .slice(-parseInt(selectedTimeRange));
   }, [students, selectedTimeRange]);
 
@@ -296,7 +302,17 @@ const VisualizationsView = React.memo(({
                     <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                     <XAxis 
                       dataKey="month" 
-                      tickFormatter={(value) => format(new Date(value), 'MMM yy')}
+                      tickFormatter={(value) => {
+                        try {
+                          if (!value) return 'Invalid Date';
+                          const date = new Date(value);
+                          if (isNaN(date.getTime())) return 'Invalid Date';
+                          return format(date, 'MMM yy');
+                        } catch (error) {
+                          console.warn('Error formatting month:', value, error);
+                          return 'Invalid Date';
+                        }
+                      }}
                       tick={{ fill: theme.palette.text.secondary }}
                     />
                     <YAxis 
@@ -305,7 +321,17 @@ const VisualizationsView = React.memo(({
                     />
                     <RechartsTooltip
                       formatter={(value) => formatCurrency(value)}
-                      labelFormatter={(label) => format(new Date(label), 'MMMM yyyy')}
+                      labelFormatter={(label) => {
+                        try {
+                          if (!label) return 'Invalid Date';
+                          const date = new Date(label);
+                          if (isNaN(date.getTime())) return 'Invalid Date';
+                          return format(date, 'MMMM yyyy');
+                        } catch (error) {
+                          console.warn('Error formatting tooltip label:', label, error);
+                          return 'Invalid Date';
+                        }
+                      }}
                       contentStyle={{
                         backgroundColor: theme.palette.background.paper,
                         border: `1px solid ${theme.palette.divider}`,
