@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const studentRoutes = require('./routes/students');
 const batchRoutes = require('./routes/batches');
-const attendanceRoutes = require('./routes/attendance');
+const attendanceRoutes = require('./routes/attendanceRoutes');
 const feeRoutes = require('./routes/fees');
 
 const app = express();

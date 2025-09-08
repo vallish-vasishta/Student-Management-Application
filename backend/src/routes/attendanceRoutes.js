@@ -9,7 +9,17 @@ router2.get('/', async (req, res) => {
     const { date, batch } = req.query;
     const studentWhere = {};
     if (batch && batch !== 'all') {
-      studentWhere.batchId = batch;
+      // If batch is a name (string), we need to find the batch ID first
+      const batchRecord = await Batch.findOne({
+        where: { name: batch }
+      });
+      
+      if (batchRecord) {
+        studentWhere.batchId = batchRecord.id;
+      } else {
+        // If batch not found, return empty result
+        return res.json([]);
+      }
     }
     // 1. Get all students for the batch
     const students = await Student.findAll({
@@ -64,7 +74,17 @@ router2.get('/history', async (req, res) => {
     }
     
     if (batch && batch !== 'all') {
-      where['$student.batchId$'] = batch;
+      // If batch is a name (string), we need to find the batch ID first
+      const batchRecord = await Batch.findOne({
+        where: { name: batch }
+      });
+      
+      if (batchRecord) {
+        where['$student.batchId$'] = batchRecord.id;
+      } else {
+        // If batch not found, return empty result
+        return res.json([]);
+      }
     }
 
     const attendance = await Attendance.findAll({
@@ -95,7 +115,17 @@ router2.get('/range', async (req, res) => {
     const studentWhere = {};
     
     if (batch && batch !== 'all') {
-      studentWhere.batchId = batch;
+      // If batch is a name (string), we need to find the batch ID first
+      const batchRecord = await Batch.findOne({
+        where: { name: batch }
+      });
+      
+      if (batchRecord) {
+        studentWhere.batchId = batchRecord.id;
+      } else {
+        // If batch not found, return empty result
+        return res.json([]);
+      }
     }
 
     // Get all students for the batch

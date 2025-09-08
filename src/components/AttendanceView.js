@@ -13,8 +13,6 @@ import {
   Card,
   CardContent,
   Box,
-  Chip,
-  LinearProgress,
   TextField,
   MenuItem,
   FormControl,
@@ -22,12 +20,8 @@ import {
   InputLabel,
   Menu,
   ListItemIcon,
-  Stack,
   Snackbar,
   Alert as MuiAlert,
-  ToggleButton,
-  ToggleButtonGroup,
-  Checkbox,
   CircularProgress,
   IconButton,
   Tooltip,
@@ -35,10 +29,8 @@ import {
 } from '@mui/material';
 import {
   FileDownload as FileDownloadIcon,
-  TableChartOutlined,
   PictureAsPdfOutlined,
   TableChart as TableChartIcon,
-  CheckCircle as CheckCircleIcon,
   CalendarToday as CalendarIcon,
   PersonOutline as PersonIcon,
   CheckCircle as PresentIcon,
@@ -46,18 +38,8 @@ import {
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
-import { format, parseISO, isAfter, subDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, getDaysInMonth, getMonth, getYear } from 'date-fns';
+import { format, parseISO, getDaysInMonth } from 'date-fns';
 import * as XLSX from 'xlsx';
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  Legend,
-} from 'recharts';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import api from '../services/api';
@@ -92,13 +74,7 @@ const AttendanceView = React.memo(({
     const batches = allBatches.map(batch => batch.name || batch).filter(Boolean);
     return batches.length > 0 ? batches[0] : 'all';
   });
-  const [viewMode, setViewMode] = useState('monthly');
-  const [dateRange, setDateRange] = useState({
-    start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    end: format(new Date(), 'yyyy-MM-dd')
-  });
   const [exportAnchorEl, setExportAnchorEl] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
@@ -398,50 +374,6 @@ const AttendanceView = React.memo(({
     setSnackbar({ open: true, message: 'Report exported to PDF successfully', severity: 'success' });
   };
 
-  const getAttendanceHistory = () => {
-    const history = [];
-    
-    // Validate date range before processing
-    if (!dateRange.start || !dateRange.end || !isValidDateString(dateRange.start) || !isValidDateString(dateRange.end)) {
-      console.warn('Invalid date range:', dateRange);
-      return history;
-    }
-    
-    let currentDate = parseISO(dateRange.start);
-    const endDate = parseISO(dateRange.end);
-    
-    // Additional validation for parsed dates
-    if (isNaN(currentDate.getTime()) || isNaN(endDate.getTime())) {
-      console.warn('Invalid parsed dates:', { start: dateRange.start, end: dateRange.end });
-      return history;
-    }
-    
-    while (!isAfter(currentDate, endDate)) {
-      const dateStr = format(currentDate, 'yyyy-MM-dd');
-      const dayData = attendanceData[dateStr] || {};
-      
-      const filteredStudents = students.filter(s => 
-        selectedBatch === 'all' || s.batch === selectedBatch
-      );
-      
-      const total = filteredStudents.length;
-      const present = filteredStudents.filter(s => 
-        dayData[s.id] === 'present'
-      ).length;
-      
-      history.push({
-        date: dateStr,
-        total,
-        present,
-        absent: total - present,
-        percentage: total ? Math.round((present / total) * 100) : 0
-      });
-      
-      currentDate = addDays(currentDate, 1);
-    }
-    
-    return history;
-  };
 
   const MonthlyView = () => (
     <Box>
@@ -640,7 +572,16 @@ const AttendanceView = React.memo(({
                   </TableCell>
                   {monthDays.map((day) => {
                     const attendance = getStudentAttendanceForDay(student.id, day);
-                    const isToday = format(new Date(), 'yyyy-MM-dd') === format(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day), 'yyyy-MM-dd');
+                    const attendanceDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const today = new Date();
+                    today.setHours(23, 59, 59, 999);
+                    const isToday = format(new Date(), 'yyyy-MM-dd') === format(attendanceDate, 'yyyy-MM-dd');
+                    const isFutureDate = attendanceDate > today;
+                    
+                    // Create appropriate tooltip content
+                    const tooltipContent = isFutureDate 
+                      ? `${format(attendanceDate, 'MMM dd, yyyy')} - Future date (cannot mark attendance)`
+                      : `${format(attendanceDate, 'MMM dd, yyyy')} - Click to mark ${attendance === 'present' ? 'absent' : 'present'}`;
                     
                     return (
                                              <TableCell 
@@ -649,23 +590,23 @@ const AttendanceView = React.memo(({
                          sx={{ 
                            padding: '1px',
                            border: `1px solid ${theme.palette.divider}`,
-                           cursor: 'pointer',
+                           cursor: isFutureDate ? 'not-allowed' : 'pointer',
                            backgroundColor: attendance === 'present' ? '#4caf50' : '#f44336',
+                           opacity: isFutureDate ? 0.6 : 1,
                            '&:hover': {
-                             backgroundColor: attendance === 'present' ? '#45a049' : '#d32f2f',
-                             opacity: 0.8
+                             backgroundColor: isFutureDate 
+                               ? (attendance === 'present' ? '#4caf50' : '#f44336')
+                               : (attendance === 'present' ? '#45a049' : '#d32f2f'),
+                             opacity: isFutureDate ? 0.6 : 0.8
                            }
                          }}
                          onClick={() => {
-                          const attendanceDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                          const today = new Date();
-                          today.setHours(23, 59, 59, 999);
-                          if (attendanceDate <= today) {
+                          if (!isFutureDate) {
                             handleAttendanceChange(student.id, day, attendance === 'present' ? 'absent' : 'present');
                           }
                         }}
                        >
-                         <Tooltip title={`${format(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day), 'MMM dd, yyyy')} - Click to mark ${attendance === 'present' ? 'absent' : 'present'}`}>
+                         <Tooltip title={tooltipContent}>
                            <Box
                              sx={{
                                width: 20,
@@ -705,182 +646,6 @@ const AttendanceView = React.memo(({
     </Box>
   );
 
-  const HistoryView = () => (
-    <>
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={8}>
-          <Card sx={{ 
-            background: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-          }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Attendance Trends
-              </Typography>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={getAttendanceHistory()}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(date) => {
-                        try {
-                          if (!date || !isValidDateString(date)) return 'Invalid Date';
-                          const parsedDate = parseISO(date);
-                          if (isNaN(parsedDate.getTime())) return 'Invalid Date';
-                          return format(parsedDate, 'MMM dd');
-                        } catch (error) {
-                          console.warn('Error formatting date:', date, error);
-                          return 'Invalid Date';
-                        }
-                      }}
-                      tick={{ fill: theme.palette.text.secondary }}
-                    />
-                    <YAxis tick={{ fill: theme.palette.text.secondary }} />
-                    <RechartsTooltip
-                      content={({ active, payload, label }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div style={{ 
-                              backgroundColor: theme.palette.background.paper, 
-                              padding: '10px', 
-                              border: `1px solid ${theme.palette.divider}`,
-                              color: theme.palette.text.primary,
-                              borderRadius: 8
-                            }}>
-                              <p>{(() => {
-                                try {
-                                  if (!label || !isValidDateString(label)) return 'Invalid Date';
-                                  const parsedDate = parseISO(label);
-                                  if (isNaN(parsedDate.getTime())) return 'Invalid Date';
-                                  return format(parsedDate, 'MMMM dd, yyyy');
-                                } catch (error) {
-                                  console.warn('Error formatting tooltip date:', label, error);
-                                  return 'Invalid Date';
-                                }
-                              })()}</p>
-                              {payload.map((entry, index) => (
-                                <p key={index} style={{ color: entry.color }}>
-                                  {entry.name}: {entry.value}%
-                                </p>
-                              ))}
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="present" 
-                      name="Present" 
-                      stroke="#4caf50" 
-                      strokeWidth={2}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="absent" 
-                      name="Absent" 
-                      stroke="#f44336" 
-                      strokeWidth={2}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="percentage" 
-                      name="Attendance %" 
-                      stroke="#2196f3" 
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Card sx={{ 
-            background: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-          }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Date Range
-              </Typography>
-              <Stack spacing={2}>
-                <TextField
-                  label="Start Date"
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-                <TextField
-                  label="End Date"
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Batch-wise Summary
-          </Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Batch</TableCell>
-                  <TableCell align="right">Total Students</TableCell>
-                  <TableCell align="right">Avg. Attendance</TableCell>
-                  <TableCell align="right">Highest</TableCell>
-                  <TableCell align="right">Lowest</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {uniqueBatches.map(batch => {
-                  const batchStats = getAttendanceHistory()
-                    .map(day => ({
-                      ...day,
-                      stats: getAttendanceStats(day.date, batch)
-                    }));
-                  
-                  const avgAttendance = Math.round(
-                    batchStats.reduce((sum, day) => sum + day.stats.percentage, 0) / 
-                    batchStats.length
-                  );
-                  
-                  const highest = Math.max(...batchStats.map(day => day.stats.percentage));
-                  const lowest = Math.min(...batchStats.map(day => day.stats.percentage));
-                  
-                  return (
-                    <TableRow key={batch}>
-                      <TableCell>Batch {batch}</TableCell>
-                      <TableCell align="right">
-                        {students.filter(s => s.batch === batch).length}
-                      </TableCell>
-                      <TableCell align="right">{avgAttendance}%</TableCell>
-                      <TableCell align="right">{highest}%</TableCell>
-                      <TableCell align="right">{lowest}%</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </>
-  );
 
   return (
     <Box>
@@ -888,32 +653,16 @@ const AttendanceView = React.memo(({
         <Typography variant="h5">
           Attendance Management
         </Typography>
-        <Box>
-          <Button
-            variant="contained"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExportClick}
-            sx={{ mr: 2 }}
-          >
-            Export Report
-          </Button>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(e, newValue) => newValue && setViewMode(newValue)}
-            size="small"
-          >
-            <ToggleButton value="monthly">
-              Monthly View
-            </ToggleButton>
-            <ToggleButton value="history">
-              History & Analytics
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
+        <Button
+          variant="contained"
+          startIcon={<FileDownloadIcon />}
+          onClick={handleExportClick}
+        >
+          Export Report
+        </Button>
       </Box>
 
-      {viewMode === 'monthly' ? <MonthlyView /> : <HistoryView />}
+      <MonthlyView />
 
       <Menu
         anchorEl={exportAnchorEl}
