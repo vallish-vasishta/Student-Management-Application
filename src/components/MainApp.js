@@ -66,8 +66,7 @@ import {
   Close as CloseIcon,
   People as PeopleIcon,
   GroupWork as GroupWorkIcon,
-  PersonAdd as PersonAddIcon,
-  MusicNote
+  PersonAdd as PersonAddIcon
 } from '@mui/icons-material';
 import { format, isPast, parseISO, isAfter, subDays, addDays } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -117,35 +116,17 @@ const Logo = ({ theme, isDark }) => (
       textAlign: 'center',
     }}
   >
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-      <MusicNote 
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box 
+        component="img" 
+        src="/logo.png" 
+        alt="Shadows Dance Studio"
         sx={{ 
-          fontSize: 32, 
-          color: theme.palette.primary.main,
+          height: 80,
+          width: 'auto',
+          objectFit: 'contain'
         }} 
       />
-      <Box>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            fontWeight: 600,
-            color: theme.palette.text.primary,
-            lineHeight: 1.2,
-          }}
-        >
-          Shadows Dance Studio
-        </Typography>
-        <Typography 
-          variant="caption" 
-          sx={{ 
-            display: 'block',
-            color: theme.palette.text.secondary,
-            fontWeight: 500,
-          }}
-        >
-          Management System
-        </Typography>
-      </Box>
     </Box>
   </Box>
 );
@@ -890,6 +871,39 @@ const MainApp = ({ initialTab }) => {
     }
   };
 
+  // Generate monthly fees for all students
+  const handleGenerateMonthlyFees = async (selectedMonth) => {
+    try {
+      // Convert YYYY-MM format to YYYY-MM-DD format for the first day of the month
+      const monthDate = new Date(selectedMonth + '-01');
+      const feesMonth = format(monthDate, 'yyyy-MM-dd');
+      
+      console.log('Generating monthly fees for:', feesMonth);
+      
+      const result = await api.generateMonthlyFees(feesMonth, 0); // Default amount is 0
+      
+      console.log('Monthly fees generation result:', result);
+      
+      // Refresh fees data
+      await fetchFees();
+      
+      // Show success message with details
+      setSnackbar({ 
+        open: true, 
+        message: `Generated ${result.createdCount} fee records for ${format(monthDate, 'MMMM yyyy')}. ${result.skippedCount} students already had fees for this month.`, 
+        severity: 'success' 
+      });
+      
+    } catch (error) {
+      console.error('Error generating monthly fees:', error);
+      setSnackbar({ 
+        open: true, 
+        message: `Failed to generate monthly fees: ${error.response?.data?.error || error.message}`, 
+        severity: 'error' 
+      });
+    }
+  };
+
   // Utility functions
   const handleSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -1206,6 +1220,8 @@ const MainApp = ({ initialTab }) => {
                 setSelectedStudent(fee);
                 setOpenEditDialog(true);
               }}
+              onGenerateMonthlyFees={handleGenerateMonthlyFees}
+              setSnackbar={setSnackbar}
             />
           </Box>
         );
@@ -1273,7 +1289,13 @@ const MainApp = ({ initialTab }) => {
             background: isDark ? 'transparent' : '#F9FAFB',
             minHeight: '100%'
           }}>
-            <FeeDashboard allBatches={allBatches} feesData={fees} fetchFees={fetchFees} setSnackbar={setSnackbar} />
+            <FeeDashboard 
+              allBatches={allBatches} 
+              feesData={fees} 
+              fetchFees={fetchFees} 
+              setSnackbar={setSnackbar}
+              onGenerateMonthlyFees={handleGenerateMonthlyFees}
+            />
           </Box>
         );
     }

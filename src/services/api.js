@@ -289,6 +289,20 @@ const api = {
       console.error('Error fetching batch fees:', error);
       throw error;
     }
+  },
+
+  // Generate monthly fees for all students
+  generateMonthlyFees: async (feesMonth, defaultAmount = 0) => {
+    try {
+      const response = await axios.post(`${API_URL}/fees/generate-monthly`, {
+        feesMonth,
+        defaultAmount
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error generating monthly fees:', error);
+      throw error;
+    }
   }
 };
 

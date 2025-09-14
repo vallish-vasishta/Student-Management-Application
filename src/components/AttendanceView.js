@@ -35,8 +35,6 @@ import {
   PersonOutline as PersonIcon,
   CheckCircle as PresentIcon,
   Cancel as AbsentIcon,
-  NavigateBefore as NavigateBeforeIcon,
-  NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
 import { format, parseISO, getDaysInMonth } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -188,11 +186,6 @@ const AttendanceView = React.memo(({
     }
   }, [currentMonth, selectedBatch, students, setAttendanceData, setIsLoadingAttendance]);
 
-  // Memoize handleMonthChange function
-  const handleMonthChange = useCallback((event) => {
-    const newMonth = event.target.value;
-    setSelectedMonth(newMonth);
-  }, []);
 
   // Memoize handleBatchChange function
   const handleBatchChange = useCallback((event) => {
@@ -200,16 +193,6 @@ const AttendanceView = React.memo(({
     setSelectedBatch(newBatch);
   }, []);
 
-  // Navigate to previous/next month
-  const navigateMonth = useCallback((direction) => {
-    const current = new Date(currentMonth);
-    if (direction === 'prev') {
-      current.setMonth(current.getMonth() - 1);
-    } else {
-      current.setMonth(current.getMonth() + 1);
-    }
-    setSelectedMonth(format(current, 'yyyy-MM'));
-  }, [currentMonth]);
 
   // Fetch attendance data when month changes
   useEffect(() => {
@@ -396,23 +379,35 @@ const AttendanceView = React.memo(({
           </Select>
         </FormControl>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton size="small" onClick={() => navigateMonth('prev')} disabled={isLoadingAttendance}>
-            <NavigateBeforeIcon />
-          </IconButton>
-          <TextField
-            type="month"
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel size="small">Month</InputLabel>
+          <Select
             value={selectedMonth}
-            onChange={handleMonthChange}
+            label="Month"
+            onChange={(e) => setSelectedMonth(e.target.value)}
             disabled={isLoadingAttendance}
-            InputLabelProps={{ shrink: true }}
-            sx={{ minWidth: 120 }}
             size="small"
-          />
-          <IconButton size="small" onClick={() => navigateMonth('next')} disabled={isLoadingAttendance}>
-            <NavigateNextIcon />
-          </IconButton>
-        </Box>
+          >
+            {(() => {
+              const months = [];
+              const currentDate = new Date();
+              for (let i = 0; i < 12; i++) {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                const monthStr = format(date, 'yyyy-MM');
+                months.push({
+                  value: monthStr,
+                  label: format(date, 'MMMM yyyy')
+                });
+              }
+              return months.map((month) => (
+                <MenuItem key={month.value} value={month.value}>
+                  {month.label}
+                </MenuItem>
+              ));
+            })()}
+          </Select>
+        </FormControl>
+
 
         {isLoadingAttendance && (
           <CircularProgress size={20} />

@@ -11,16 +11,12 @@ import {
   FormControlLabel,
   Divider,
   IconButton,
-  Stack,
   TextField,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  ListItemButton,
-  Card,
-  CardContent,
-  Alert
+  ListItemButton
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -30,10 +26,7 @@ import {
   Security as SecurityIcon,
   Help as HelpIcon,
   ChevronRight as ChevronRightIcon,
-  Lock as LockIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  LocationOn as LocationIcon
+  Lock as LockIcon
 } from '@mui/icons-material';
 import ChangePassword from './ChangePassword';
 import { useTheme as useThemeContext } from '../contexts/ThemeContext';
@@ -49,14 +42,6 @@ const Settings = ({ open, onClose, onOpenProfile }) => {
   // Settings state
   const [openChangePassword, setOpenChangePassword] = useState(false);
 
-  // Academy contact details (configurable)
-  const academyDetails = {
-    name: 'Shadows Dance Studio',
-    email: 'info@shadowsdancestudio.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Dance Street, City, State 12345',
-    hours: 'Mon-Fri: 9:00 AM - 8:00 PM, Sat-Sun: 10:00 AM - 6:00 PM'
-  };
 
   // Handle theme change
   const handleThemeChange = (event) => {
@@ -181,72 +166,6 @@ const Settings = ({ open, onClose, onOpenProfile }) => {
           </ListItem>
         </List>
 
-        {/* Help and Support Details */}
-        <Box sx={{ p: 3, pt: 0 }}>
-          <Card variant="outlined" sx={{ borderRadius: 2 }}>
-            <CardContent sx={{ p: 2.5 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'primary.main' }}>
-                {academyDetails.name}
-              </Typography>
-              
-              <Stack spacing={2}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <EmailIcon sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />
-                  <Box>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                      Email
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {academyDetails.email}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <PhoneIcon sx={{ color: 'text.secondary', fontSize: '1.2rem' }} />
-                  <Box>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                      Phone
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {academyDetails.phone}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                  <LocationIcon sx={{ color: 'text.secondary', fontSize: '1.2rem', mt: 0.5 }} />
-                  <Box>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                      Address
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {academyDetails.address}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-                  <HelpIcon sx={{ color: 'text.secondary', fontSize: '1.2rem', mt: 0.5 }} />
-                  <Box>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                      Hours
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                      {academyDetails.hours}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Stack>
-
-              <Alert severity="info" sx={{ mt: 2 }}>
-                <Typography variant="body2">
-                  For technical support or account issues, please contact us during business hours.
-                </Typography>
-              </Alert>
-            </CardContent>
-          </Card>
-        </Box>
       </DialogContent>
 
       <DialogActions sx={{ p: 3, pt: 1 }}>

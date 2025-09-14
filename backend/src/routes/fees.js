@@ -227,4 +227,83 @@ feeRouter.get('/batch/:batchId', async (req, res) => {
   }
 });
 
+// Generate monthly fees for all students
+feeRouter.post('/generate-monthly', async (req, res) => {
+  try {
+    const { feesMonth, defaultAmount = 0 } = req.body;
+    
+    if (!feesMonth) {
+      return res.status(400).json({ error: 'Fees month is required' });
+    }
+
+    // Get all active students
+    const students = await Student.findAll();
+    
+    if (students.length === 0) {
+      return res.status(400).json({ error: 'No students found' });
+    }
+
+    const createdFees = [];
+    const skippedStudents = [];
+
+    // Create fee records for each student
+    for (const student of students) {
+      // Check if fee record already exists for this student and month
+      const existingFee = await Fee.findOne({
+        where: {
+          studentId: student.id,
+          feesMonth
+        }
+      });
+
+      if (existingFee) {
+        skippedStudents.push({
+          studentId: student.id,
+          studentName: student.name,
+          reason: 'Fee record already exists'
+        });
+        continue;
+      }
+
+      // Create new fee record
+      const fee = await Fee.create({
+        studentId: student.id,
+        feesMonth,
+        amount: defaultAmount,
+        status: 'Unpaid',
+        paymentDate: null,
+        paymentMode: null
+      });
+
+      // Fetch the created fee with student details
+      const createdFee = await Fee.findByPk(fee.id, {
+        include: [{
+          model: Student,
+          attributes: ['name', 'batchId'],
+          include: [{
+            model: Batch,
+            as: 'batch',
+            attributes: ['name']
+          }]
+        }]
+      });
+
+      createdFees.push(createdFee);
+    }
+
+    res.status(201).json({
+      message: `Generated ${createdFees.length} fee records for ${feesMonth}`,
+      createdFees,
+      skippedStudents,
+      totalStudents: students.length,
+      createdCount: createdFees.length,
+      skippedCount: skippedStudents.length
+    });
+
+  } catch (error) {
+    console.error('Error generating monthly fees:', error);
+    res.status(500).json({ error: 'Failed to generate monthly fees' });
+  }
+});
+
 module.exports = feeRouter; 

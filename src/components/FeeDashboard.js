@@ -28,7 +28,8 @@ import {
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import api from '../services/api';
@@ -39,7 +40,8 @@ const FeeDashboard = React.memo(({
   allBatches = [], 
   feesData = [], 
   fetchFees, 
-  setSnackbar 
+  setSnackbar,
+  onGenerateMonthlyFees
 }) => {
   // Add a function to get batch name from student object
   const getBatchName = useCallback((student) => {
@@ -192,6 +194,16 @@ const FeeDashboard = React.memo(({
 
   const handleAddFee = async (feeData) => {
     try {
+      // Validate: Cannot mark fee as "Paid" if amount is 0
+      if (feeData.status === 'Paid' && (Number(feeData.amount) === 0 || !feeData.amount)) {
+        setSnackbar({
+          open: true,
+          message: 'Cannot mark fee as Paid when amount is 0.00',
+          severity: 'error'
+        });
+        return;
+      }
+
       await api.addFee(feeData);
       await fetchFees(); // Refresh fees data
       setOpenAddDialog(false);
@@ -213,6 +225,16 @@ const FeeDashboard = React.memo(({
     try {
       if (!selectedFee) {
         console.error('No fee selected for editing');
+        return;
+      }
+
+      // Validate: Cannot mark fee as "Paid" if amount is 0
+      if (feeData.status === 'Paid' && (Number(feeData.amount) === 0 || !feeData.amount)) {
+        setSnackbar({
+          open: true,
+          message: 'Cannot mark fee as Paid when amount is 0.00',
+          severity: 'error'
+        });
         return;
       }
 
@@ -375,6 +397,17 @@ const FeeDashboard = React.memo(({
             </Select>
           </FormControl>
         </Grid>
+        <Grid item xs={12} md={2}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => onGenerateMonthlyFees && onGenerateMonthlyFees(selectedMonth)}
+            fullWidth
+            sx={{ height: '56px' }}
+          >
+            Generate Monthly Fees
+          </Button>
+        </Grid>
       </Grid>
 
       <TableContainer component={Paper}>
@@ -495,7 +528,17 @@ const FeeDashboard = React.memo(({
                   name="amount"
                   type="number"
                   value={newFee.amount}
-                  onChange={(e) => setNewFee(prev => ({ ...prev, amount: e.target.value }))}
+                  onChange={(e) => {
+                    const newAmount = e.target.value;
+                    setNewFee(prev => {
+                      // If amount is set to 0 and status is "Paid", automatically change to "Unpaid"
+                      const updatedFee = { ...prev, amount: newAmount };
+                      if (Number(newAmount) === 0 && prev.status === 'Paid') {
+                        updatedFee.status = 'Unpaid';
+                      }
+                      return updatedFee;
+                    });
+                  }}
                   required
                   InputProps={{
                     startAdornment: <InputAdornment position="start">₹</InputAdornment>,
@@ -508,10 +551,23 @@ const FeeDashboard = React.memo(({
                   <Select
                     name="status"
                     value={newFee.status}
-                    onChange={(e) => setNewFee(prev => ({ ...prev, status: e.target.value }))}
+                    onChange={(e) => {
+                      // Prevent setting status as "Paid" if amount is 0
+                      if (e.target.value === 'Paid' && (Number(newFee.amount) === 0 || !newFee.amount)) {
+                        setSnackbar({
+                          open: true,
+                          message: 'Cannot mark fee as Paid when amount is 0.00',
+                          severity: 'warning'
+                        });
+                        return;
+                      }
+                      setNewFee(prev => ({ ...prev, status: e.target.value }));
+                    }}
                     label="Status"
                   >
-                    <MenuItem value="Paid">Paid</MenuItem>
+                    <MenuItem value="Paid" disabled={Number(newFee.amount) === 0 || !newFee.amount}>
+                      Paid {Number(newFee.amount) === 0 || !newFee.amount ? '(Amount must be > 0)' : ''}
+                    </MenuItem>
                     <MenuItem value="Unpaid">Unpaid</MenuItem>
                   </Select>
                 </FormControl>
@@ -567,7 +623,17 @@ const FeeDashboard = React.memo(({
                   name="amount"
                   type="number"
                   value={newFee.amount}
-                  onChange={(e) => setNewFee(prev => ({ ...prev, amount: e.target.value }))}
+                  onChange={(e) => {
+                    const newAmount = e.target.value;
+                    setNewFee(prev => {
+                      // If amount is set to 0 and status is "Paid", automatically change to "Unpaid"
+                      const updatedFee = { ...prev, amount: newAmount };
+                      if (Number(newAmount) === 0 && prev.status === 'Paid') {
+                        updatedFee.status = 'Unpaid';
+                      }
+                      return updatedFee;
+                    });
+                  }}
                   required
                   InputProps={{
                     startAdornment: <InputAdornment position="start">₹</InputAdornment>,
@@ -580,10 +646,23 @@ const FeeDashboard = React.memo(({
                   <Select
                     name="status"
                     value={newFee.status}
-                    onChange={(e) => setNewFee(prev => ({ ...prev, status: e.target.value }))}
+                    onChange={(e) => {
+                      // Prevent setting status as "Paid" if amount is 0
+                      if (e.target.value === 'Paid' && (Number(newFee.amount) === 0 || !newFee.amount)) {
+                        setSnackbar({
+                          open: true,
+                          message: 'Cannot mark fee as Paid when amount is 0.00',
+                          severity: 'warning'
+                        });
+                        return;
+                      }
+                      setNewFee(prev => ({ ...prev, status: e.target.value }));
+                    }}
                     label="Status"
                   >
-                    <MenuItem value="Paid">Paid</MenuItem>
+                    <MenuItem value="Paid" disabled={Number(newFee.amount) === 0 || !newFee.amount}>
+                      Paid {Number(newFee.amount) === 0 || !newFee.amount ? '(Amount must be > 0)' : ''}
+                    </MenuItem>
                     <MenuItem value="Unpaid">Unpaid</MenuItem>
                   </Select>
                 </FormControl>
