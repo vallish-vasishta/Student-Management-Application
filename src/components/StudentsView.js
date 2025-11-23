@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-  Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, Typography
+  Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, Typography, InputAdornment, Grid
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
 import api from '../services/api';
 
 const StudentsView = ({ onAddStudent }) => {
@@ -14,6 +14,8 @@ const StudentsView = ({ onAddStudent }) => {
   const [currentStudent, setCurrentStudent] = useState({ name: '', batchId: '', contact: '' });
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [deleteId, setDeleteId] = useState(null);
+  const [showAll, setShowAll] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch students and batches
   useEffect(() => {
@@ -80,14 +82,68 @@ const StudentsView = ({ onAddStudent }) => {
 
   const handleDelete = async () => {
     try {
+      // First, delete all associated fee records for this student
+      try {
+        const studentFees = await api.getStudentFees(deleteId);
+        if (studentFees && studentFees.length > 0) {
+          // Delete each fee record
+          for (const fee of studentFees) {
+            try {
+              await api.deleteFee(deleteId, fee.feesMonth);
+            } catch (feeError) {
+              console.error('Error deleting fee record:', feeError);
+              // Continue with other fees even if one fails
+            }
+          }
+        }
+      } catch (feeError) {
+        console.error('Error fetching/deleting student fees:', feeError);
+        // Continue with student deletion attempt
+      }
+
+      // Now delete the student
       await api.deleteStudent(deleteId);
-      setSnackbar({ open: true, message: 'Student deleted', severity: 'success' });
+      setSnackbar({ open: true, message: 'Student deleted successfully', severity: 'success' });
       setStudents((prev) => prev.filter(s => s.id !== deleteId));
       setDeleteId(null);
     } catch (err) {
-      setSnackbar({ open: true, message: 'Failed to delete student', severity: 'error' });
+      console.error('Error deleting student:', err);
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to delete student';
+      setSnackbar({ 
+        open: true, 
+        message: errorMessage.includes('foreign key') 
+          ? 'Cannot delete student. Please delete all associated fee records first, or contact administrator.'
+          : `Failed to delete student: ${errorMessage}`,
+        severity: 'error' 
+      });
     }
   };
+
+  // Filter and limit displayed data
+  const filteredData = useMemo(() => {
+    let result = students;
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(student => {
+        const studentName = student.name?.toLowerCase() || '';
+        const batchName = batches.find(b => b.id === student.batchId)?.name?.toLowerCase() || '';
+        const contact = student.contact?.toLowerCase() || '';
+        return studentName.includes(query) || batchName.includes(query) || contact.includes(query);
+      });
+    }
+
+    return result;
+  }, [students, searchQuery, batches]);
+
+  // Limit displayed data to top 10 by default
+  const displayedData = useMemo(() => {
+    if (showAll) {
+      return filteredData;
+    }
+    return filteredData.slice(0, 10);
+  }, [filteredData, showAll]);
 
   return (
     <Box>
@@ -97,6 +153,36 @@ const StudentsView = ({ onAddStudent }) => {
           Add Student
         </Button>
       </Box>
+      <Grid container spacing={2} sx={{ mb: 2 }}>
+        <Grid item xs={12} md={4}>
+          <TextField
+            fullWidth
+            label="Search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name, batch, or contact"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchQuery('')}
+                    edge="end"
+                    sx={{ mr: -1 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+      </Grid>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -108,7 +194,7 @@ const StudentsView = ({ onAddStudent }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {students.map(student => (
+            {displayedData.map(student => (
               <TableRow key={student.id}>
                 <TableCell>{student.name}</TableCell>
                 <TableCell>{batches.find(b => b.id === student.batchId)?.name || ''}</TableCell>
@@ -119,14 +205,31 @@ const StudentsView = ({ onAddStudent }) => {
                 </TableCell>
               </TableRow>
             ))}
-            {students.length === 0 && !loading && (
+            {displayedData.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={4} align="center">No students found.</TableCell>
+                <TableCell colSpan={4} align="center">
+                  {searchQuery ? `No students found matching "${searchQuery}"` : 'No students found.'}
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Expand/Collapse Button */}
+      {filteredData.length > 10 && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={() => setShowAll(!showAll)}
+            endIcon={showAll ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          >
+            {showAll 
+              ? `Show Less (Top 10 of ${filteredData.length})` 
+              : `Show All (${filteredData.length} total records)`}
+          </Button>
+        </Box>
+      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="xs" fullWidth>

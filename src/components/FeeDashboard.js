@@ -29,7 +29,10 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { format, parseISO } from 'date-fns';
 import api from '../services/api';
@@ -55,11 +58,15 @@ const FeeDashboard = React.memo(({
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [error, setError] = useState(null);
+  const [showAll, setShowAll] = useState(false);
   
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedFee, setSelectedFee] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openHistoryDialog, setOpenHistoryDialog] = useState(false);
+  const [selectedStudentForHistory, setSelectedStudentForHistory] = useState(null);
+  const [numberOfMonths, setNumberOfMonths] = useState(5);
   const [newFee, setNewFee] = useState({
     studentId: '',
     feesMonth: format(new Date(), 'yyyy-MM'),
@@ -181,6 +188,14 @@ const FeeDashboard = React.memo(({
 
     return result;
   }, [students, feesData, searchQuery, selectedBatch, selectedMonth, sortField, sortDirection, getBatchName]);
+
+  // Limit displayed data to top 10 by default
+  const displayedData = useMemo(() => {
+    if (showAll) {
+      return filteredData;
+    }
+    return filteredData.slice(0, 10);
+  }, [filteredData, showAll]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -339,6 +354,73 @@ const FeeDashboard = React.memo(({
     setOpenEditDialog(true);
   };
 
+  const handleStudentNameClick = (item) => {
+    setSelectedStudentForHistory(item.student);
+    setNumberOfMonths(5); // Reset to default when opening dialog
+    setOpenHistoryDialog(true);
+  };
+
+  // Get fee history for selected student (configurable number of months)
+  const studentFeeHistory = useMemo(() => {
+    if (!selectedStudentForHistory || !feesData.length) return [];
+
+    const currentDate = new Date();
+    const monthsList = [];
+    
+    // Generate months based on selected number
+    for (let i = 0; i < numberOfMonths; i++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthStr = format(date, 'yyyy-MM');
+      monthsList.push(monthStr);
+    }
+
+    // Get all fees for this student
+    const studentFees = feesData.filter(fee => {
+      if (fee.studentId !== selectedStudentForHistory.id) return false;
+      const feeMonth = fee.feesMonth ? fee.feesMonth.substring(0, 7) : null;
+      return feeMonth && monthsList.includes(feeMonth);
+    });
+
+    // Sort by month (newest first)
+    studentFees.sort((a, b) => {
+      const monthA = a.feesMonth ? a.feesMonth.substring(0, 7) : '';
+      const monthB = b.feesMonth ? b.feesMonth.substring(0, 7) : '';
+      return monthB.localeCompare(monthA);
+    });
+
+    // Create a map of existing fees by month
+    const feesMap = new Map();
+    studentFees.forEach(fee => {
+      const month = fee.feesMonth ? fee.feesMonth.substring(0, 7) : '';
+      if (month) {
+        feesMap.set(month, fee);
+      }
+    });
+
+    // Create result array with all selected months, showing "No record" for missing months
+    const result = monthsList.map(month => {
+      if (feesMap.has(month)) {
+        return {
+          month,
+          fee: feesMap.get(month),
+          hasRecord: true
+        };
+      }
+      return {
+        month,
+        fee: null,
+        hasRecord: false
+      };
+    });
+
+    return result;
+  }, [selectedStudentForHistory, feesData, numberOfMonths]);
+
+  // Check if any fee record has payment date
+  const hasPaymentDate = useMemo(() => {
+    return studentFeeHistory.some(item => item.hasRecord && item.fee?.paymentDate);
+  }, [studentFeeHistory]);
+
   if (error) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -360,6 +442,18 @@ const FeeDashboard = React.memo(({
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSearchQuery('')}
+                    edge="end"
+                    sx={{ mr: -1 }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
                 </InputAdornment>
               ),
             }}
@@ -431,16 +525,30 @@ const FeeDashboard = React.memo(({
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredData.length === 0 ? (
+            {displayedData.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   {selectedBatch !== 'all' ? `No students found in batch "${selectedBatch}"` : `No students found for ${format(parseISO(selectedMonth), 'MMMM yyyy')}`}
                 </TableCell>
               </TableRow>
             ) : (
-              filteredData.map((item) => (
+              displayedData.map((item) => (
                 <TableRow key={`${item.student.id}-${item.fee.feesMonth}`}>
-                  <TableCell>{item.student.name || ''}</TableCell>
+                  <TableCell>
+                    <Typography
+                      component="span"
+                      onClick={() => handleStudentNameClick(item)}
+                      sx={{
+                        cursor: 'pointer',
+                        color: 'primary.main',
+                        '&:hover': {
+                          color: 'primary.dark',
+                        }
+                      }}
+                    >
+                      {item.student.name || ''}
+                    </Typography>
+                  </TableCell>
                   <TableCell>{getBatchName(item.student)}</TableCell>
 
                   <TableCell>₹{item.fee.amount || 0}</TableCell>
@@ -476,6 +584,21 @@ const FeeDashboard = React.memo(({
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Expand/Collapse Button */}
+      {filteredData.length > 10 && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            variant="outlined"
+            onClick={() => setShowAll(!showAll)}
+            endIcon={showAll ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          >
+            {showAll 
+              ? `Show Less (Top 10 of ${filteredData.length})` 
+              : `Show All (${filteredData.length} total records)`}
+          </Button>
+        </Box>
+      )}
 
       {/* Add Fee Dialog */}
       <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)} maxWidth="sm" fullWidth>
@@ -703,6 +826,123 @@ const FeeDashboard = React.memo(({
           <Button onClick={() => setOpenDeleteDialog(false)}>Cancel</Button>
           <Button onClick={handleDeleteFee} color="error" variant="contained">
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Fee History Dialog */}
+      <Dialog
+        open={openHistoryDialog}
+        onClose={() => {
+          setOpenHistoryDialog(false);
+          setSelectedStudentForHistory(null);
+          setNumberOfMonths(5); // Reset to default when closing
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Fee History - {selectedStudentForHistory?.name || 'N/A'}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mb: 2, alignItems: 'center' }}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" color="text.secondary">
+                Batch: {getBatchName(selectedStudentForHistory)}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Box>
+                <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary' }}>
+                  Number of Months
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={numberOfMonths}
+                    onChange={(e) => setNumberOfMonths(Number(e.target.value))}
+                    displayEmpty
+                  >
+                    {[1, 2, 3, 4, 5, 6, 9, 12, 18, 24].map(num => (
+                      <MenuItem key={num} value={num}>
+                        Last {num} {num === 1 ? 'Month' : 'Months'}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Grid>
+          </Grid>
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell><strong>Month</strong></TableCell>
+                  <TableCell align="right"><strong>Amount</strong></TableCell>
+                  <TableCell align="center"><strong>Status</strong></TableCell>
+                  {hasPaymentDate && (
+                    <TableCell><strong>Payment Date</strong></TableCell>
+                  )}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {studentFeeHistory.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={hasPaymentDate ? 4 : 3} align="center">
+                      No fee records found for the last {numberOfMonths} {numberOfMonths === 1 ? 'month' : 'months'}.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  studentFeeHistory.map((item) => (
+                    <TableRow key={item.month}>
+                      <TableCell>
+                        {format(parseISO(item.month + '-01'), 'MMMM yyyy')}
+                      </TableCell>
+                      <TableCell align="right">
+                        {item.hasRecord ? (
+                          <Typography>₹{item.fee.amount || 0}</Typography>
+                        ) : (
+                          <Typography color="text.secondary" fontStyle="italic">
+                            No record
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {item.hasRecord ? (
+                          <Chip
+                            label={item.fee.status || 'Unpaid'}
+                            color={item.fee.status === 'Paid' ? 'success' : 'error'}
+                            size="small"
+                          />
+                        ) : (
+                          <Typography color="text.secondary" fontStyle="italic" variant="body2">
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                      {hasPaymentDate && (
+                        <TableCell>
+                          {item.hasRecord && item.fee?.paymentDate ? (
+                            format(parseISO(item.fee.paymentDate), 'dd MMM yyyy')
+                          ) : (
+                            <Typography color="text.secondary" fontStyle="italic" variant="body2">
+                              -
+                            </Typography>
+                          )}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setOpenHistoryDialog(false);
+            setSelectedStudentForHistory(null);
+          }}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>
